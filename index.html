@@ -206,6 +206,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 @keyframes spin{to{transform:rotate(360deg);}}
 #player-page{position:fixed;inset:0;z-index:200;background:#000;display:none;}
 #player-page.show{display:block;}
+#player-page.cursor-hidden,#player-page.cursor-hidden *{cursor:none !important;}
 #player-video{width:100%;height:100%;object-fit:contain;display:block;}
 #player-video.zoom-fill{object-fit:fill;}
 #player-video.zoom-cover{object-fit:cover;}
@@ -1541,16 +1542,13 @@ function togglePassVis(){const input=document.getElementById('f-pass');const btn
 function doExitApp(){doAuthLogout();}
 
 function buildProxyUrls(url){
-  // Worker SEMPRE — resolve CORS em PC, Android, TV e GitHub Pages
   var httpsUrl = url.replace(/^http:/,'https:');
   var httpUrl  = url.replace(/^https:/,'http:');
   var W = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
   return [
-    W + encodeURIComponent(httpsUrl),  // Worker + HTTPS (principal)
-    W + encodeURIComponent(url),       // Worker + original
-    httpsUrl,                          // direto HTTPS (fallback TV)
-    url,                               // direto original
-    httpUrl,                           // HTTP forçado
+    W + encodeURIComponent(httpsUrl),
+    W + encodeURIComponent(url),
+    httpsUrl, url, httpUrl,
   ];
 }
 
@@ -2021,26 +2019,22 @@ function closeEpModal(){document.getElementById('ep-modal').classList.remove('sh
 // ═══════════════════════════════════════════════════
 function liveUrls(id){
   const{server:s,user:u,pass:p}=CFG;
-  const b  = s.replace(/\/+$/,'');
-  const hs = b.replace(/^http:/,'https:');
-  const hp = b.replace(/^https:/,'http:');
-  const W  = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-
+  const b    = s.replace(/\/+$/,'');
+  const hs   = b.replace(/^http:/,'https:');
+  const hp   = b.replace(/^https:/,'http:');
+  const W    = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
   const m3u8   = `${b}/live/${u}/${p}/${id}.m3u8`;
   const ts     = `${b}/live/${u}/${p}/${id}.ts`;
   const hsM3u8 = `${hs}/live/${u}/${p}/${id}.m3u8`;
   const hsTs   = `${hs}/live/${u}/${p}/${id}.ts`;
   const hpM3u8 = `${hp}/live/${u}/${p}/${id}.m3u8`;
   const hpTs   = `${hp}/live/${u}/${p}/${id}.ts`;
-
-  // Worker SEMPRE primeiro — o Worker já reescreve os segmentos .ts internos
   return [
-    W + encodeURIComponent(hsM3u8),  // principal: Worker + HTTPS
-    W + encodeURIComponent(m3u8),    // fallback1: Worker + HTTP
-    W + encodeURIComponent(hsTs),    // fallback2: Worker + TS HTTPS
-    W + encodeURIComponent(ts),      // fallback3: Worker + TS HTTP
-    hsM3u8, m3u8,                    // fallback4/5: direto (TV nativa sem CORS)
-    hpM3u8, hpTs,
+    W + encodeURIComponent(hsM3u8),
+    W + encodeURIComponent(m3u8),
+    W + encodeURIComponent(hsTs),
+    W + encodeURIComponent(ts),
+    hsM3u8, m3u8, hpM3u8, hpTs,
     `${b}/live/${u}/${p}/${id}`,
   ];
 }
@@ -2050,13 +2044,17 @@ function movieUrls(id,ext){
   const hs=b.replace(/^http:\/\//,'https://');
   const exts=ext?[ext,'mp4','mkv','avi']:['mp4','mkv','avi'];
   const out=[];
-  const W2='https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
+  const onHttps=location.protocol==='https:'||(window._cpx_useHttps===true);
   exts.forEach(e=>{
-    // Worker sempre primeiro
-    out.push(W2+encodeURIComponent(`${hs}/movie/${u}/${p}/${id}.${e}`));
-    out.push(W2+encodeURIComponent(`${b}/movie/${u}/${p}/${id}.${e}`));
-    out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
-    out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
+    if(onHttps){
+      out.push('https://cpstreamx-proxy.criador-mql5.workers.dev/?url='+encodeURIComponent(b+'/movie/'+u+'/'+p+'/'+id+'.'+e));
+      
+      out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
+      out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
+    } else {
+      out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
+      out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
+    }
   });
   return out;
 }
@@ -2105,13 +2103,13 @@ var _cpx_proxyAlt  = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
 var _cpx_proxyFail = {}; // rastreia proxies que falharam
 
 function cpxProxyUrl(url, useAlt) {
-  if(!url || !url.startsWith('http://')) return url;
+  if(!url) return url;
   var base = useAlt ? _cpx_proxyAlt : _cpx_proxyBase;
   return base + encodeURIComponent(url);
 }
 
 function buildHlsConfig(isLive) {
-  var needProxy = true; // Worker SEMPRE — resolve CORS em PC, Android e TV
+  var needProxy = true; // Worker sempre — resolve CORS em PC, Android e TV
 
   // Custom loader que proxia fragmentos HTTP automaticamente
   var pLoader = (function(){
@@ -2120,11 +2118,9 @@ function buildHlsConfig(isLive) {
     PLoader.prototype = Object.create(DefaultLoader.prototype);
     PLoader.prototype.constructor = PLoader;
     PLoader.prototype.load = function(ctx, cfg, cbs) {
-      // Proxia QUALQUER URL que não seja já do Worker
       if(needProxy && ctx && ctx.url && !ctx.url.includes('workers.dev')) {
         var useAlt = _cpx_proxyFail[_cpx_proxyBase] === true;
-        var base2  = useAlt ? _cpx_proxyAlt : _cpx_proxyBase;
-        ctx.url = base2 + encodeURIComponent(ctx.url);
+        ctx.url = cpxProxyUrl(ctx.url, useAlt);
       }
       var origError = cbs.onError;
       var self = this;
@@ -2532,8 +2528,28 @@ function seekRW(){const v=document.getElementById('player-video');v.currentTime=
 function toggleFullscreen(){const el=document.getElementById('player-page');if(!document.fullscreenElement&&!document.webkitFullscreenElement){const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;if(req)req.call(el);}else{const exit=document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen;if(exit)exit.call(document);}showOverlay();}
 function resumePlayer(){const v=document.getElementById('player-video');v.play().catch(()=>{});isPlaying=true;document.getElementById('btn-pp').textContent='⏸';}
 function pausePlayer(){const v=document.getElementById('player-video');v.pause();isPlaying=false;document.getElementById('btn-pp').textContent='▶';}
-function showOverlay(){const ui=document.getElementById('player-ui');ui.classList.add('vis');clearTimeout(overlayTimer);overlayTimer=setTimeout(()=>{ui.classList.remove('vis');hideQualityPanel();hideTracksPanel();},5000);}
-function toggleOverlay(){const ui=document.getElementById('player-ui');if(ui.classList.contains('vis')){ui.classList.remove('vis');clearTimeout(overlayTimer);hideQualityPanel();hideTracksPanel();}else showOverlay();}
+function showOverlay(){
+  const ui=document.getElementById('player-ui');
+  const pp=document.getElementById('player-page');
+  ui.classList.add('vis');
+  pp.classList.remove('cursor-hidden');
+  clearTimeout(overlayTimer);
+  overlayTimer=setTimeout(()=>{
+    ui.classList.remove('vis');
+    pp.classList.add('cursor-hidden');
+    hideQualityPanel();hideTracksPanel();
+  },3000);
+}
+function toggleOverlay(){
+  const ui=document.getElementById('player-ui');
+  const pp=document.getElementById('player-page');
+  if(ui.classList.contains('vis')){
+    ui.classList.remove('vis');
+    pp.classList.add('cursor-hidden');
+    clearTimeout(overlayTimer);
+    hideQualityPanel();hideTracksPanel();
+  } else showOverlay();
+}
 document.getElementById('player-video').addEventListener('click',toggleOverlay);
 document.getElementById('player-page').addEventListener('mousemove',showOverlay);
 document.getElementById('player-page').addEventListener('click',e=>{const qp=document.getElementById('quality-panel');const tp=document.getElementById('tracks-panel');if(!qp.contains(e.target)&&!document.getElementById('quality-btn').contains(e.target))qp.classList.remove('show');if(!tp.contains(e.target)&&!document.getElementById('tracks-btn').contains(e.target))tp.classList.remove('show');});

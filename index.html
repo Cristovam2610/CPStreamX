@@ -1545,6 +1545,7 @@ function buildProxyUrls(url){
   var httpsUrl = url.replace(/^http:/,'https:');
   var httpUrl  = url.replace(/^https:/,'http:');
   var W = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
+  // Worker sempre para chamadas de API (leve, sem problema no Cloudflare free)
   return [
     W + encodeURIComponent(httpsUrl),
     W + encodeURIComponent(url),
@@ -2029,6 +2030,7 @@ function liveUrls(id){
   const hsTs   = `${hs}/live/${u}/${p}/${id}.ts`;
   const hpM3u8 = `${hp}/live/${u}/${p}/${id}.m3u8`;
   const hpTs   = `${hp}/live/${u}/${p}/${id}.ts`;
+  // Worker sempre primeiro — resolve CORS em qualquer dispositivo
   return [
     W + encodeURIComponent(hsM3u8),
     W + encodeURIComponent(m3u8),
@@ -2041,39 +2043,30 @@ function liveUrls(id){
 function movieUrls(id,ext){
   const{server:s,user:u,pass:p}=CFG;
   const b=s.replace(/\/+$/,'');
-  const hs=b.replace(/^http:\/\//,'https://');
+  const hs=b.replace(/^http:/,'https:');
+  const hp=b.replace(/^https:/,'http:');
   const exts=ext?[ext,'mp4','mkv','avi']:['mp4','mkv','avi'];
   const out=[];
-  const onHttps=location.protocol==='https:'||(window._cpx_useHttps===true);
+  // VOD vai DIRETO — Cloudflare free bloqueia streaming de vídeo pesado
   exts.forEach(e=>{
-    if(onHttps){
-      out.push('https://cpstreamx-proxy.criador-mql5.workers.dev/?url='+encodeURIComponent(b+'/movie/'+u+'/'+p+'/'+id+'.'+e));
-      
-      out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
-      out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
-    } else {
-      out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
-      out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
-    }
+    out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
+    out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
+    out.push(`${hp}/movie/${u}/${p}/${id}.${e}`);
   });
   return out;
 }
 function epUrls(id,ext){
   const{server:s,user:u,pass:p}=CFG;
   const b=s.replace(/\/+$/,'');
-  const hs=b.replace(/^http:\/\//,'https://');
+  const hs=b.replace(/^http:/,'https:');
+  const hp=b.replace(/^https:/,'http:');
   const exts=ext?[ext,'mkv','mp4','avi']:['mkv','mp4','avi'];
   const out=[];
-  const onHttps=location.protocol==='https:';
+  // Séries vão DIRETO — Cloudflare free bloqueia streaming de vídeo pesado
   exts.forEach(e=>{
-    if(onHttps){
-      out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
-      out.push('https://cpstreamx-proxy.criador-mql5.workers.dev/?url='+encodeURIComponent(b+'/series/'+u+'/'+p+'/'+id+'.'+e));
-      out.push(`${b}/series/${u}/${p}/${id}.${e}`);
-    } else {
-      out.push(`${b}/series/${u}/${p}/${id}.${e}`);
-      out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
-    }
+    out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
+    out.push(`${b}/series/${u}/${p}/${id}.${e}`);
+    out.push(`${hp}/series/${u}/${p}/${id}.${e}`);
   });
   return out;
 }

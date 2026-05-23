@@ -157,6 +157,22 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 }
 #cat-header-close:hover{background:rgba(255,255,255,.08);color:var(--text);}
 #cat-list{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent;display:block;}
+#cat-list::-webkit-scrollbar{width:10px;}
+#cat-list::-webkit-scrollbar-track{background:var(--surface2);}
+#cat-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
+#cat-list::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+#content-body::-webkit-scrollbar{width:10px;}
+#content-body::-webkit-scrollbar-track{background:var(--bg);}
+#content-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
+#content-body::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+#gsearch-results::-webkit-scrollbar{width:10px;}
+#gsearch-results::-webkit-scrollbar-track{background:transparent;}
+#gsearch-results::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
+#gsearch-results::-webkit-scrollbar-thumb:hover{background:var(--muted);}
+.settings-body::-webkit-scrollbar,.epmod-list::-webkit-scrollbar,.adm-body::-webkit-scrollbar,.vmod-body::-webkit-scrollbar{width:10px;}
+.settings-body::-webkit-scrollbar-track,.epmod-list::-webkit-scrollbar-track,.adm-body::-webkit-scrollbar-track,.vmod-body::-webkit-scrollbar-track{background:var(--surface);}
+.settings-body::-webkit-scrollbar-thumb,.epmod-list::-webkit-scrollbar-thumb,.adm-body::-webkit-scrollbar-thumb,.vmod-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
+.settings-body::-webkit-scrollbar-thumb:hover,.epmod-list::-webkit-scrollbar-thumb:hover,.adm-body::-webkit-scrollbar-thumb:hover,.vmod-body::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 .cat-item{
   padding:14px 20px;font-size:16px;cursor:pointer;
   border-left:3px solid transparent;
@@ -178,6 +194,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 #global-search-btn:hover{border-color:var(--accent);color:var(--text);}
 #item-count{font-size:14px;color:var(--muted);white-space:nowrap;}
 #content-body{flex:1;overflow-y:auto;padding:20px 24px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+#content-body::-webkit-scrollbar{width:10px;}
+#content-body::-webkit-scrollbar-track{background:var(--bg);}
+#content-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
+#content-body::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 .ch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
 .ch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;position:relative;min-height:80px;}
 .ch-card:hover{border-color:var(--accent);background:var(--surface2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
@@ -1542,10 +1562,10 @@ function togglePassVis(){const input=document.getElementById('f-pass');const btn
 function doExitApp(){doAuthLogout();}
 
 function buildProxyUrls(url){
+  // Worker para chamadas de API (JSON leve) — OK no Cloudflare free
   var httpsUrl = url.replace(/^http:/,'https:');
   var httpUrl  = url.replace(/^https:/,'http:');
   var W = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-  // Worker sempre para chamadas de API (leve, sem problema no Cloudflare free)
   return [
     W + encodeURIComponent(httpsUrl),
     W + encodeURIComponent(url),
@@ -2020,23 +2040,22 @@ function closeEpModal(){document.getElementById('ep-modal').classList.remove('sh
 // ═══════════════════════════════════════════════════
 function liveUrls(id){
   const{server:s,user:u,pass:p}=CFG;
-  const b    = s.replace(/\/+$/,'');
-  const hs   = b.replace(/^http:/,'https:');
-  const hp   = b.replace(/^https:/,'http:');
-  const W    = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-  const m3u8   = `${b}/live/${u}/${p}/${id}.m3u8`;
-  const ts     = `${b}/live/${u}/${p}/${id}.ts`;
+  const b  = s.replace(/\/+$/,'');
+  const hs = b.replace(/^http:/,'https:');
+  const hp = b.replace(/^https:/,'http:');
+  const W  = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
   const hsM3u8 = `${hs}/live/${u}/${p}/${id}.m3u8`;
+  const m3u8   = `${b}/live/${u}/${p}/${id}.m3u8`;
   const hsTs   = `${hs}/live/${u}/${p}/${id}.ts`;
   const hpM3u8 = `${hp}/live/${u}/${p}/${id}.m3u8`;
   const hpTs   = `${hp}/live/${u}/${p}/${id}.ts`;
-  // Worker sempre primeiro — resolve CORS em qualquer dispositivo
+  // Worker proxia o manifest .m3u8 (leve — OK no free)
+  // O Worker reescreve os segmentos .ts para HTTPS direto (pesado — sem Worker)
   return [
-    W + encodeURIComponent(hsM3u8),
-    W + encodeURIComponent(m3u8),
-    W + encodeURIComponent(hsTs),
-    W + encodeURIComponent(ts),
-    hsM3u8, m3u8, hpM3u8, hpTs,
+    W + encodeURIComponent(hsM3u8),  // manifest via Worker
+    W + encodeURIComponent(m3u8),    // manifest via Worker (http)
+    hsM3u8, m3u8,                    // direto (TV nativa sem CORS)
+    hpM3u8, hpTs,
     `${b}/live/${u}/${p}/${id}`,
   ];
 }
@@ -2047,7 +2066,6 @@ function movieUrls(id,ext){
   const hp=b.replace(/^https:/,'http:');
   const exts=ext?[ext,'mp4','mkv','avi']:['mp4','mkv','avi'];
   const out=[];
-  // VOD vai DIRETO — Cloudflare free bloqueia streaming de vídeo pesado
   exts.forEach(e=>{
     out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
     out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
@@ -2062,7 +2080,6 @@ function epUrls(id,ext){
   const hp=b.replace(/^https:/,'http:');
   const exts=ext?[ext,'mkv','mp4','avi']:['mkv','mp4','avi'];
   const out=[];
-  // Séries vão DIRETO — Cloudflare free bloqueia streaming de vídeo pesado
   exts.forEach(e=>{
     out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
     out.push(`${b}/series/${u}/${p}/${id}.${e}`);
@@ -2096,43 +2113,36 @@ var _cpx_proxyAlt  = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
 var _cpx_proxyFail = {}; // rastreia proxies que falharam
 
 function cpxProxyUrl(url, useAlt) {
-  if(!url) return url;
+  if(!url || !url.startsWith('http://')) return url;
   var base = useAlt ? _cpx_proxyAlt : _cpx_proxyBase;
   return base + encodeURIComponent(url);
 }
 
 function buildHlsConfig(isLive) {
-  var needProxy = true; // Worker sempre — resolve CORS em PC, Android e TV
+  var needProxy = true;
 
-  // Custom loader que proxia fragmentos HTTP automaticamente
+  // Worker proxia SOMENTE o manifest .m3u8 (texto leve — OK no Cloudflare free)
+  // Fragmentos .ts vão DIRETO (vídeo pesado — proibido pelo Cloudflare free ToS)
+  // O Worker já reescreve as URLs dos fragmentos para HTTPS direto
   var pLoader = (function(){
     var DefaultLoader = Hls.DefaultConfig.loader;
     function PLoader(cfg){ DefaultLoader.call(this, cfg); }
     PLoader.prototype = Object.create(DefaultLoader.prototype);
     PLoader.prototype.constructor = PLoader;
     PLoader.prototype.load = function(ctx, cfg, cbs) {
-      if(needProxy && ctx && ctx.url && !ctx.url.includes('workers.dev')) {
-        var useAlt = _cpx_proxyFail[_cpx_proxyBase] === true;
-        ctx.url = cpxProxyUrl(ctx.url, useAlt);
-      }
-      var origError = cbs.onError;
-      var self = this;
-      cbs.onError = function(err, ctx2, xhr) {
-        // Se corsproxy falhou, marcar e tentar allorigins
-        if(ctx2 && ctx2.url && ctx2.url.includes('workers.dev')){  // Worker falhou
-          _cpx_proxyFail[_cpx_proxyBase] = true;
-          var origUrl = decodeURIComponent(ctx2.url.replace('https://cpstreamx-proxy.criador-mql5.workers.dev/?url=',''));
-          ctx2.url = origUrl; // tentar direto como último recurso
-          DefaultLoader.prototype.load.call(self, ctx2, cfg, {
-            onSuccess: cbs.onSuccess,
-            onError: origError,
-            onTimeout: cbs.onTimeout,
-            onAbort: cbs.onAbort,
-          });
-          return;
+      if(ctx && ctx.url) {
+        var u = ctx.url;
+        var isManifest = u.includes('.m3u8') || ctx.type === 'manifest' || ctx.type === 'level';
+        var isSegment  = u.includes('.ts') || u.includes('.aac') || ctx.type === 'fragment';
+        if(needProxy && isManifest && !u.includes('workers.dev')) {
+          // Manifest → passa pelo Worker (reescreve URLs internas para HTTPS direto)
+          var httpsU = u.replace(/^http:/, 'https:');
+          ctx.url = _cpx_proxyBase + encodeURIComponent(httpsU);
+        } else if(isSegment) {
+          // Fragmento → vai DIRETO em HTTPS (sem Worker)
+          ctx.url = u.replace(/^http:/, 'https:');
         }
-        if(origError) origError(err, ctx2, xhr);
-      };
+      }
       DefaultLoader.prototype.load.call(this, ctx, cfg, cbs);
     };
     return PLoader;
@@ -2140,8 +2150,13 @@ function buildHlsConfig(isLive) {
 
   var baseCfg = {
     enableWorker: true,
-    loader: needProxy ? pLoader : Hls.DefaultConfig.loader,
-    xhrSetup: function(xhr, url) { xhr.withCredentials = false; },
+    loader: pLoader,
+    xhrSetup: function(xhr, url) {
+      xhr.withCredentials = false;
+      // UA mask — faz o servidor IPTV achar que é Smart TV
+      var ua = window._cpx_uaMask || 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/7.0 TV Safari/538.1';
+      try { xhr.setRequestHeader('User-Agent', ua); } catch(_){}
+    },
   };
 
   if(!isLive) {

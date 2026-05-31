@@ -157,22 +157,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 }
 #cat-header-close:hover{background:rgba(255,255,255,.08);color:var(--text);}
 #cat-list{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--border) transparent;display:block;}
-#cat-list::-webkit-scrollbar{width:10px;}
-#cat-list::-webkit-scrollbar-track{background:var(--surface2);}
-#cat-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
-#cat-list::-webkit-scrollbar-thumb:hover{background:var(--muted);}
-#content-body::-webkit-scrollbar{width:10px;}
-#content-body::-webkit-scrollbar-track{background:var(--bg);}
-#content-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
-#content-body::-webkit-scrollbar-thumb:hover{background:var(--muted);}
-#gsearch-results::-webkit-scrollbar{width:10px;}
-#gsearch-results::-webkit-scrollbar-track{background:transparent;}
-#gsearch-results::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
-#gsearch-results::-webkit-scrollbar-thumb:hover{background:var(--muted);}
-.settings-body::-webkit-scrollbar,.epmod-list::-webkit-scrollbar,.adm-body::-webkit-scrollbar,.vmod-body::-webkit-scrollbar{width:10px;}
-.settings-body::-webkit-scrollbar-track,.epmod-list::-webkit-scrollbar-track,.adm-body::-webkit-scrollbar-track,.vmod-body::-webkit-scrollbar-track{background:var(--surface);}
-.settings-body::-webkit-scrollbar-thumb,.epmod-list::-webkit-scrollbar-thumb,.adm-body::-webkit-scrollbar-thumb,.vmod-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
-.settings-body::-webkit-scrollbar-thumb:hover,.epmod-list::-webkit-scrollbar-thumb:hover,.adm-body::-webkit-scrollbar-thumb:hover,.vmod-body::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 .cat-item{
   padding:14px 20px;font-size:16px;cursor:pointer;
   border-left:3px solid transparent;
@@ -194,10 +178,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 #global-search-btn:hover{border-color:var(--accent);color:var(--text);}
 #item-count{font-size:14px;color:var(--muted);white-space:nowrap;}
 #content-body{flex:1;overflow-y:auto;padding:20px 24px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
-#content-body::-webkit-scrollbar{width:10px;}
-#content-body::-webkit-scrollbar-track{background:var(--bg);}
-#content-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px;}
-#content-body::-webkit-scrollbar-thumb:hover{background:var(--muted);}
 .ch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
 .ch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;position:relative;min-height:80px;}
 .ch-card:hover{border-color:var(--accent);background:var(--surface2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
@@ -227,6 +207,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 #player-page{position:fixed;inset:0;z-index:200;background:#000;display:none;}
 #player-page.show{display:block;}
 #player-page.cursor-hidden,#player-page.cursor-hidden *{cursor:none !important;}
+/* Cursor visível no app fora do player */
+#app,#app *{cursor:default;}
 #player-video{width:100%;height:100%;object-fit:contain;display:block;}
 #player-video.zoom-fill{object-fit:fill;}
 #player-video.zoom-cover{object-fit:cover;}
@@ -1467,7 +1449,12 @@ async function loadServerConfigs(){
   }catch(_){}
   // Fallback: localStorage
   try{const ls=JSON.parse(tvGet('stv_server_cfg')||'null');if(ls){serverConfigs=ls;return;}}catch(_){}
-  serverConfigs={s0:{url:'https://toppcard.fun',iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},s1:{url:'http://toppcard.fun',iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},s2:{url:'https://streams4k.xyz',iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},s3:{url:'https://adplayer.online',iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true}};
+  serverConfigs={
+    s0:{url:'https://toppcard.fun',        iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
+    s1:{url:'https://streams4k.xyz',       iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
+    s2:{url:'https://pedidoonline.space',  iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
+    s3:{url:'http://192.168.87.1:2082',    iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
+  };
   _cacheServersLocal();
 }
 function _cacheServersLocal(){try{tvSet('stv_server_cfg',JSON.stringify(serverConfigs));}catch(_){}}
@@ -1562,15 +1549,20 @@ function togglePassVis(){const input=document.getElementById('f-pass');const btn
 function doExitApp(){doAuthLogout();}
 
 function buildProxyUrls(url){
-  // Worker para chamadas de API (JSON leve) — OK no Cloudflare free
   var httpsUrl = url.replace(/^http:/,'https:');
-  var httpUrl  = url.replace(/^https:/,'http:');
+  // IMPORTANTE: encodeURIComponent encoda TUDO incluindo & ? = da query string
+  var encoded  = encodeURIComponent(url);
+  var encodedH = encodeURIComponent(httpsUrl);
   var W = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-  return [
-    W + encodeURIComponent(httpsUrl),
-    W + encodeURIComponent(url),
-    httpsUrl, url, httpUrl,
-  ];
+  if(location.protocol === 'https:' || window._cpx_useProxy){
+    return [
+      W + encodedH,  // Worker + HTTPS encodado corretamente
+      W + encoded,   // Worker + HTTP encodado
+      httpsUrl,      // HTTPS direto
+      url
+    ];
+  }
+  return [url, httpsUrl, W + encoded];
 }
 
 window.addEventListener('load',async()=>{
@@ -2042,48 +2034,76 @@ function liveUrls(id){
   const{server:s,user:u,pass:p}=CFG;
   const b  = s.replace(/\/+$/,'');
   const hs = b.replace(/^http:/,'https:');
-  const hp = b.replace(/^https:/,'http:');
-  const W  = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-  const hsM3u8 = `${hs}/live/${u}/${p}/${id}.m3u8`;
-  const m3u8   = `${b}/live/${u}/${p}/${id}.m3u8`;
-  const hsTs   = `${hs}/live/${u}/${p}/${id}.ts`;
-  const hpM3u8 = `${hp}/live/${u}/${p}/${id}.m3u8`;
-  const hpTs   = `${hp}/live/${u}/${p}/${id}.ts`;
-  // Worker proxia o manifest .m3u8 (leve — OK no free)
-  // O Worker reescreve os segmentos .ts para HTTPS direto (pesado — sem Worker)
-  return [
-    W + encodeURIComponent(hsM3u8),  // manifest via Worker
-    W + encodeURIComponent(m3u8),    // manifest via Worker (http)
-    hsM3u8, m3u8,                    // direto (TV nativa sem CORS)
-    hpM3u8, hpTs,
-    `${b}/live/${u}/${p}/${id}`,
-  ];
+  const onHttps = location.protocol === 'https:' || (window._cpx_useHttps === true);
+
+  // URLs base
+  const m3u8  = `${b}/live/${u}/${p}/${id}.m3u8`;
+  const ts    = `${b}/live/${u}/${p}/${id}.ts`;
+  const hsM3u8= `${hs}/live/${u}/${p}/${id}.m3u8`;
+  const hsTs  = `${hs}/live/${u}/${p}/${id}.ts`;
+
+  // Worker Cloudflare — proxia TUDO incluindo redirects
+  const W = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
+  const proxied = (url) => [W + encodeURIComponent(url)];
+
+  if(onHttps){
+    // Worker intercepta redirects HTTP do servidor IPTV
+    var liveW = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
+    return [
+      liveW + encodeURIComponent(hsM3u8),
+      liveW + encodeURIComponent(m3u8),
+      hsM3u8,
+      m3u8, ts,
+      `${b}/live/${u}/${p}/${id}`
+    ];
+  } else {
+    // Página em HTTP (localhost): ordem original
+    return [
+      m3u8, ts,
+      hsM3u8, hsTs,
+      hpM3u8, hpTs,
+      `${b}:8080/live/${u}/${p}/${id}.m3u8`,
+      `${b}:8080/live/${u}/${p}/${id}.ts`,
+      `${b}/live/${u}/${p}/${id}`
+    ];
+  }
 }
 function movieUrls(id,ext){
   const{server:s,user:u,pass:p}=CFG;
   const b=s.replace(/\/+$/,'');
-  const hs=b.replace(/^http:/,'https:');
-  const hp=b.replace(/^https:/,'http:');
+  const hs=b.replace(/^http:\/\//,'https://');
   const exts=ext?[ext,'mp4','mkv','avi']:['mp4','mkv','avi'];
   const out=[];
+  const onHttps=location.protocol==='https:'||(window._cpx_useHttps===true);
   exts.forEach(e=>{
-    out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
-    out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
-    out.push(`${hp}/movie/${u}/${p}/${id}.${e}`);
+    if(onHttps){
+      out.push('https://cpstreamx-proxy.criador-mql5.workers.dev/?url='+encodeURIComponent(b+'/movie/'+u+'/'+p+'/'+id+'.'+e));
+      
+      out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
+      out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
+    } else {
+      out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
+      out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
+    }
   });
   return out;
 }
 function epUrls(id,ext){
   const{server:s,user:u,pass:p}=CFG;
   const b=s.replace(/\/+$/,'');
-  const hs=b.replace(/^http:/,'https:');
-  const hp=b.replace(/^https:/,'http:');
+  const hs=b.replace(/^http:\/\//,'https://');
   const exts=ext?[ext,'mkv','mp4','avi']:['mkv','mp4','avi'];
   const out=[];
+  const onHttps=location.protocol==='https:';
   exts.forEach(e=>{
-    out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
-    out.push(`${b}/series/${u}/${p}/${id}.${e}`);
-    out.push(`${hp}/series/${u}/${p}/${id}.${e}`);
+    if(onHttps){
+      out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
+      out.push('https://cpstreamx-proxy.criador-mql5.workers.dev/?url='+encodeURIComponent(b+'/series/'+u+'/'+p+'/'+id+'.'+e));
+      out.push(`${b}/series/${u}/${p}/${id}.${e}`);
+    } else {
+      out.push(`${b}/series/${u}/${p}/${id}.${e}`);
+      out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
+    }
   });
   return out;
 }
@@ -2096,7 +2116,7 @@ function playM3UChannel(ch){isVOD=false;playerItem=ch;setPlayerInfo(ch.name,'',c
 function playMovie(item){isVOD=true;playerItem=item;setPlayerInfo(item.name||item.title,item.year||'',item.stream_icon||item.cover,false);document.getElementById('epg-btn').style.display='none';addToHistory(item,'movies');const pos=getSavedPos(item.stream_id);openPlayer(movieUrls(item.stream_id,item.container_extension),pos);}
 function playEpisode(ep){closeEpModal();isVOD=true;playerItem={stream_id:ep.id,name:ep.title||'Episódio',stream_icon:seriesData?.info?.cover||''};const title=`${modalItem?.name||''} — T${curSeason}E${ep.episode_num} ${ep.title||''}`;setPlayerInfo(title,'',seriesData?.info?.cover||'',false);document.getElementById('epg-btn').style.display='none';addToHistory({stream_id:ep.id,name:title,stream_icon:seriesData?.info?.cover||''},'series');openPlayer(epUrls(ep.id,ep.container_extension));}
 
-function openPlayer(urls,resumePos){document.getElementById('player-page').classList.add('show');playerUrls=urls;playerUrlIdx=0;mediaErrCount=0;showPlayerSpinner(true);showPlayerErr(false);closeResume();hideQualityPanel();hideTracksPanel();if(resumePos&&resumePos>5){document.getElementById('resume-yes-btn').dataset.pos=resumePos;document.getElementById('resume-bar').classList.add('show');}loadUrl(0);showOverlay();}
+function openPlayer(urls,resumePos){document.getElementById('player-page').classList.add('show');playerUrls=urls;playerUrlIdx=0;mediaErrCount=0;window._cpx_bufToast=false;showPlayerSpinner(true);showPlayerErr(false);closeResume();hideQualityPanel();hideTracksPanel();if(resumePos&&resumePos>5){document.getElementById('resume-yes-btn').dataset.pos=resumePos;document.getElementById('resume-bar').classList.add('show');}loadUrl(0);showOverlay();}
 
 // ═══════════════════════════════════════════════════
 // loadUrl — CORREÇÕES DE ÁUDIO E LEGENDAS HLS
@@ -2119,11 +2139,9 @@ function cpxProxyUrl(url, useAlt) {
 }
 
 function buildHlsConfig(isLive) {
-  var needProxy = true;
+  var needProxy = true; // Worker sempre ativo
 
-  // Worker proxia SOMENTE o manifest .m3u8 (texto leve — OK no Cloudflare free)
-  // Fragmentos .ts vão DIRETO (vídeo pesado — proibido pelo Cloudflare free ToS)
-  // O Worker já reescreve as URLs dos fragmentos para HTTPS direto
+  // Custom loader que proxia fragmentos HTTP automaticamente
   var pLoader = (function(){
     var DefaultLoader = Hls.DefaultConfig.loader;
     function PLoader(cfg){ DefaultLoader.call(this, cfg); }
@@ -2132,15 +2150,14 @@ function buildHlsConfig(isLive) {
     PLoader.prototype.load = function(ctx, cfg, cbs) {
       if(ctx && ctx.url) {
         var u = ctx.url;
-        var isManifest = u.includes('.m3u8') || ctx.type === 'manifest' || ctx.type === 'level';
-        var isSegment  = u.includes('.ts') || u.includes('.aac') || ctx.type === 'fragment';
+        var isManifest = u.includes('.m3u8') || ctx.type==='manifest' || ctx.type==='level';
+        var isSegment  = u.includes('.ts') || u.includes('.aac') || ctx.type==='fragment';
         if(needProxy && isManifest && !u.includes('workers.dev')) {
-          // Manifest → passa pelo Worker (reescreve URLs internas para HTTPS direto)
-          var httpsU = u.replace(/^http:/, 'https:');
-          ctx.url = _cpx_proxyBase + encodeURIComponent(httpsU);
+          // Manifest → Worker (texto leve, OK no Cloudflare free)
+          ctx.url = _cpx_proxyBase + encodeURIComponent(u.replace(/^http:/,'https:'));
         } else if(isSegment) {
-          // Fragmento → vai DIRETO em HTTPS (sem Worker)
-          ctx.url = u.replace(/^http:/, 'https:');
+          // Segmento → HTTPS direto (vídeo pesado, sem Worker)
+          ctx.url = u.replace(/^http:/,'https:');
         }
       }
       DefaultLoader.prototype.load.call(this, ctx, cfg, cbs);
@@ -2153,17 +2170,29 @@ function buildHlsConfig(isLive) {
     loader: pLoader,
     xhrSetup: function(xhr, url) {
       xhr.withCredentials = false;
-      // UA mask — faz o servidor IPTV achar que é Smart TV
       var ua = window._cpx_uaMask || 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/7.0 TV Safari/538.1';
       try { xhr.setRequestHeader('User-Agent', ua); } catch(_){}
     },
   };
 
+  // ── Buffer Dinâmico baseado na RAM ──
+  function getRAM(){ return navigator.deviceMemory || (/Tizen|SMART-TV/i.test(navigator.userAgent)?1.5:/Android/i.test(navigator.userAgent)?2:4); }
+  function calcBuf(ram){ return Math.max(60,Math.min(14400,Math.floor(ram*1024*0.15/2.5))); }
+
   if(!isLive) {
-    // VOD config
+    var ram=getRAM(), maxBuf=calcBuf(ram), backBuf=Math.min(maxBuf,300);
+    if(!window._cpx_bufToast){
+      window._cpx_bufToast=true;
+      var mins=Math.floor(maxBuf/60);
+      var lbl=mins>=60?(Math.floor(mins/60)+'h '+(mins%60?mins%60+'min':'')):(mins+'min');
+      setTimeout(()=>toast('💾 Buffer: '+lbl+' · RAM: '+ram+'GB','ok'),1200);
+    }
     return Object.assign({}, baseCfg, {
-      backBufferLength:120, maxBufferLength:120, maxMaxBufferLength:240,
-      startLevel:-1, abrEwmaDefaultEstimate:2000000,
+      lowLatencyMode:false,
+      backBufferLength:backBuf, maxBufferLength:maxBuf, maxMaxBufferLength:maxBuf*2,
+      maxBufferSize:ram*1024*0.15*1000*1000,
+      startLevel:-1, abrEwmaDefaultEstimate:3000000,
+      abrBandWidthFactor:0.9, abrBandWidthUpFactor:0.7,
       manifestLoadingTimeOut:15000, manifestLoadingMaxRetry:4,
       levelLoadingTimeOut:15000, fragLoadingTimeOut:25000,
       fragLoadingMaxRetry:6, fragLoadingRetryDelay:500,
@@ -2360,7 +2389,27 @@ function loadUrl(idx) {
     if (v.buffered.length) { const pct=(v.buffered.end(v.buffered.length-1)/(v.duration||1))*100; document.getElementById('pl-buf-fill').style.width=Math.min(pct,100)+'%'; }
     updateSeekBar();
     if (isVOD) autoSavePos();
+    // Badge de cache (atualiza a cada 10s para não travar)
+    if(isVOD && !v._badgeThrottle){ v._badgeThrottle=true; setTimeout(()=>{v._badgeThrottle=false;updateCacheBadge(v);},10000); updateCacheBadge(v); }
   };
+
+function updateCacheBadge(v){
+  try{
+    if(!v||!v.buffered||!v.buffered.length||!isVOD)return;
+    var ahead=Math.max(0,v.buffered.end(v.buffered.length-1)-v.currentTime);
+    var mins=Math.floor(ahead/60);
+    var badge=document.getElementById('pl-cache-badge');
+    if(!badge){
+      badge=document.createElement('div');badge.id='pl-cache-badge';
+      badge.style.cssText='position:absolute;bottom:108px;right:56px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:4px 10px;font-size:12px;color:rgba(255,255,255,.55);pointer-events:none;z-index:5;display:none;';
+      document.getElementById('player-page').appendChild(badge);
+    }
+    if(mins>0){
+      var lbl=mins>=60?(Math.floor(mins/60)+'h '+(mins%60?mins%60+'min':'')):(mins+' min');
+      badge.textContent='⬛ '+lbl+' em cache';badge.style.display='';
+    } else badge.style.display='none';
+  }catch(_){}
+}
 }
 
 function closePlayer(){document.getElementById('player-page').classList.remove('show');}
@@ -2536,26 +2585,26 @@ function seekRW(){const v=document.getElementById('player-video');v.currentTime=
 function toggleFullscreen(){const el=document.getElementById('player-page');if(!document.fullscreenElement&&!document.webkitFullscreenElement){const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;if(req)req.call(el);}else{const exit=document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen;if(exit)exit.call(document);}showOverlay();}
 function resumePlayer(){const v=document.getElementById('player-video');v.play().catch(()=>{});isPlaying=true;document.getElementById('btn-pp').textContent='⏸';}
 function pausePlayer(){const v=document.getElementById('player-video');v.pause();isPlaying=false;document.getElementById('btn-pp').textContent='▶';}
+var _cursorTimer=null;
 function showOverlay(){
   const ui=document.getElementById('player-ui');
   const pp=document.getElementById('player-page');
   ui.classList.add('vis');
   pp.classList.remove('cursor-hidden');
+  // Overlay UI some em 5s
   clearTimeout(overlayTimer);
-  overlayTimer=setTimeout(()=>{
-    ui.classList.remove('vis');
-    pp.classList.add('cursor-hidden');
-    hideQualityPanel();hideTracksPanel();
-  },3000);
+  overlayTimer=setTimeout(()=>{ui.classList.remove('vis');hideQualityPanel();hideTracksPanel();},5000);
+  // Cursor some em 15s (timer separado)
+  clearTimeout(_cursorTimer);
+  _cursorTimer=setTimeout(()=>{ pp.classList.add('cursor-hidden'); },15000);
 }
 function toggleOverlay(){
   const ui=document.getElementById('player-ui');
-  const pp=document.getElementById('player-page');
   if(ui.classList.contains('vis')){
     ui.classList.remove('vis');
-    pp.classList.add('cursor-hidden');
     clearTimeout(overlayTimer);
     hideQualityPanel();hideTracksPanel();
+    // cursor segue seu próprio timer de 15s — não ocultar imediatamente
   } else showOverlay();
 }
 document.getElementById('player-video').addEventListener('click',toggleOverlay);

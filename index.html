@@ -206,9 +206,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 @keyframes spin{to{transform:rotate(360deg);}}
 #player-page{position:fixed;inset:0;z-index:200;background:#000;display:none;}
 #player-page.show{display:block;}
-#player-page.cursor-hidden,#player-page.cursor-hidden *{cursor:none !important;}
-/* Cursor visível no app fora do player */
-#app,#app *{cursor:default;}
+/* Cursor no player: visível por padrão, some após 15s via JS */
+#player-page { cursor: default !important; }
+#player-page * { cursor: default !important; }
+#player-page.cursor-hidden { cursor: none !important; }
+#player-page.cursor-hidden * { cursor: none !important; }
 #player-video{width:100%;height:100%;object-fit:contain;display:block;}
 #player-video.zoom-fill{object-fit:fill;}
 #player-video.zoom-cover{object-fit:cover;}
@@ -749,7 +751,7 @@ body.touch-mode .cat-item { padding:18px 20px; font-size:17px; }
 body.touch-mode .vod-card .vod-title { font-size:14px; }
 
 /* ── TV D-pad mode ── */
-body.tv-dpad * { cursor:none !important; }
+/* cursor no player-page gerenciado via JS — não mais pelo tv-dpad */
 body.tv-dpad .ch-card { min-height:100px; }
 body.tv-dpad .cat-item { padding:20px 22px; font-size:18px; }
 body.tv-dpad .hp-item { padding:22px 10px; }
@@ -1450,10 +1452,10 @@ async function loadServerConfigs(){
   // Fallback: localStorage
   try{const ls=JSON.parse(tvGet('stv_server_cfg')||'null');if(ls){serverConfigs=ls;return;}}catch(_){}
   serverConfigs={
-    s0:{url:'https://toppcard.fun',        iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
-    s1:{url:'https://streams4k.xyz',       iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
-    s2:{url:'https://pedidoonline.space',  iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
-    s3:{url:'http://192.168.87.1:2082',    iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
+    s0:{url:'https://toppcard.fun',       iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
+    s1:{url:'https://streams4k.xyz',      iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
+    s2:{url:'https://pedidoonline.space', iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
+    s3:{url:'http://192.168.87.1:2082',   iptv_user:'venrkdml7n02',iptv_pass:'71985344834',enabled:true},
   };
   _cacheServersLocal();
 }
@@ -2032,78 +2034,51 @@ function closeEpModal(){document.getElementById('ep-modal').classList.remove('sh
 // ═══════════════════════════════════════════════════
 function liveUrls(id){
   const{server:s,user:u,pass:p}=CFG;
-  const b  = s.replace(/\/+$/,'');
-  const hs = b.replace(/^http:/,'https:');
-  const onHttps = location.protocol === 'https:' || (window._cpx_useHttps === true);
-
-  // URLs base
-  const m3u8  = `${b}/live/${u}/${p}/${id}.m3u8`;
-  const ts    = `${b}/live/${u}/${p}/${id}.ts`;
-  const hsM3u8= `${hs}/live/${u}/${p}/${id}.m3u8`;
-  const hsTs  = `${hs}/live/${u}/${p}/${id}.ts`;
-
-  // Worker Cloudflare — proxia TUDO incluindo redirects
-  const W = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-  const proxied = (url) => [W + encodeURIComponent(url)];
-
-  if(onHttps){
-    // Worker intercepta redirects HTTP do servidor IPTV
-    var liveW = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-    return [
-      liveW + encodeURIComponent(hsM3u8),
-      liveW + encodeURIComponent(m3u8),
-      hsM3u8,
-      m3u8, ts,
-      `${b}/live/${u}/${p}/${id}`
-    ];
-  } else {
-    // Página em HTTP (localhost): ordem original
-    return [
-      m3u8, ts,
-      hsM3u8, hsTs,
-      hpM3u8, hpTs,
-      `${b}:8080/live/${u}/${p}/${id}.m3u8`,
-      `${b}:8080/live/${u}/${p}/${id}.ts`,
-      `${b}/live/${u}/${p}/${id}`
-    ];
-  }
+  const b   = s.replace(/\/+$/,'');
+  const hs  = b.replace(/^http:/,'https:');
+  const hp  = b.replace(/^https:/,'http:');
+  const W   = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
+  const hsM3u8 = hs+'/live/'+u+'/'+p+'/'+id+'.m3u8';
+  const m3u8   = b +'/live/'+u+'/'+p+'/'+id+'.m3u8';
+  const hpM3u8 = hp+'/live/'+u+'/'+p+'/'+id+'.m3u8';
+  const hpTs   = hp+'/live/'+u+'/'+p+'/'+id+'.ts';
+  // Worker APENAS para o manifest .m3u8 (texto leve — OK no Cloudflare free)
+  // Fragmentos .ts → HTTPS direto (vídeo pesado — proibido no Cloudflare free)
+  return [
+    W+encodeURIComponent(hsM3u8),  // manifest via Worker
+    W+encodeURIComponent(m3u8),    // manifest via Worker (fallback http)
+    hsM3u8, m3u8,                  // direto HTTPS/HTTP (TV nativa sem CORS)
+    hpM3u8, hpTs,
+    b+'/live/'+u+'/'+p+'/'+id,
+  ];
 }
 function movieUrls(id,ext){
   const{server:s,user:u,pass:p}=CFG;
   const b=s.replace(/\/+$/,'');
-  const hs=b.replace(/^http:\/\//,'https://');
+  const hs=b.replace(/^http:/,'https:');
+  const hp=b.replace(/^https:/,'http:');
   const exts=ext?[ext,'mp4','mkv','avi']:['mp4','mkv','avi'];
   const out=[];
-  const onHttps=location.protocol==='https:'||(window._cpx_useHttps===true);
+  // Filmes DIRETO HTTPS — Cloudflare free proíbe streaming de vídeo pelo Worker
   exts.forEach(e=>{
-    if(onHttps){
-      out.push('https://cpstreamx-proxy.criador-mql5.workers.dev/?url='+encodeURIComponent(b+'/movie/'+u+'/'+p+'/'+id+'.'+e));
-      
-      out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
-      out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
-    } else {
-      out.push(`${b}/movie/${u}/${p}/${id}.${e}`);
-      out.push(`${hs}/movie/${u}/${p}/${id}.${e}`);
-    }
+    out.push(hs+'/movie/'+u+'/'+p+'/'+id+'.'+e);
+    out.push(b+'/movie/'+u+'/'+p+'/'+id+'.'+e);
+    out.push(hp+'/movie/'+u+'/'+p+'/'+id+'.'+e);
   });
   return out;
 }
 function epUrls(id,ext){
   const{server:s,user:u,pass:p}=CFG;
   const b=s.replace(/\/+$/,'');
-  const hs=b.replace(/^http:\/\//,'https://');
+  const hs=b.replace(/^http:/,'https:');
+  const hp=b.replace(/^https:/,'http:');
   const exts=ext?[ext,'mkv','mp4','avi']:['mkv','mp4','avi'];
   const out=[];
-  const onHttps=location.protocol==='https:';
+  // Séries DIRETO HTTPS — Cloudflare free proíbe streaming de vídeo pelo Worker
   exts.forEach(e=>{
-    if(onHttps){
-      out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
-      out.push('https://cpstreamx-proxy.criador-mql5.workers.dev/?url='+encodeURIComponent(b+'/series/'+u+'/'+p+'/'+id+'.'+e));
-      out.push(`${b}/series/${u}/${p}/${id}.${e}`);
-    } else {
-      out.push(`${b}/series/${u}/${p}/${id}.${e}`);
-      out.push(`${hs}/series/${u}/${p}/${id}.${e}`);
-    }
+    out.push(hs+'/series/'+u+'/'+p+'/'+id+'.'+e);
+    out.push(b+'/series/'+u+'/'+p+'/'+id+'.'+e);
+    out.push(hp+'/series/'+u+'/'+p+'/'+id+'.'+e);
   });
   return out;
 }
@@ -2116,7 +2091,7 @@ function playM3UChannel(ch){isVOD=false;playerItem=ch;setPlayerInfo(ch.name,'',c
 function playMovie(item){isVOD=true;playerItem=item;setPlayerInfo(item.name||item.title,item.year||'',item.stream_icon||item.cover,false);document.getElementById('epg-btn').style.display='none';addToHistory(item,'movies');const pos=getSavedPos(item.stream_id);openPlayer(movieUrls(item.stream_id,item.container_extension),pos);}
 function playEpisode(ep){closeEpModal();isVOD=true;playerItem={stream_id:ep.id,name:ep.title||'Episódio',stream_icon:seriesData?.info?.cover||''};const title=`${modalItem?.name||''} — T${curSeason}E${ep.episode_num} ${ep.title||''}`;setPlayerInfo(title,'',seriesData?.info?.cover||'',false);document.getElementById('epg-btn').style.display='none';addToHistory({stream_id:ep.id,name:title,stream_icon:seriesData?.info?.cover||''},'series');openPlayer(epUrls(ep.id,ep.container_extension));}
 
-function openPlayer(urls,resumePos){document.getElementById('player-page').classList.add('show');playerUrls=urls;playerUrlIdx=0;mediaErrCount=0;window._cpx_bufToast=false;showPlayerSpinner(true);showPlayerErr(false);closeResume();hideQualityPanel();hideTracksPanel();if(resumePos&&resumePos>5){document.getElementById('resume-yes-btn').dataset.pos=resumePos;document.getElementById('resume-bar').classList.add('show');}loadUrl(0);showOverlay();}
+function openPlayer(urls,resumePos){document.getElementById('player-page').classList.add('show');playerUrls=urls;playerUrlIdx=0;mediaErrCount=0;showPlayerSpinner(true);showPlayerErr(false);closeResume();hideQualityPanel();hideTracksPanel();if(resumePos&&resumePos>5){document.getElementById('resume-yes-btn').dataset.pos=resumePos;document.getElementById('resume-bar').classList.add('show');}loadUrl(0);showOverlay();}
 
 // ═══════════════════════════════════════════════════
 // loadUrl — CORREÇÕES DE ÁUDIO E LEGENDAS HLS
@@ -2139,7 +2114,7 @@ function cpxProxyUrl(url, useAlt) {
 }
 
 function buildHlsConfig(isLive) {
-  var needProxy = true; // Worker sempre ativo
+  var needProxy = true; // Worker sempre — resolve CORS
 
   // Custom loader que proxia fragmentos HTTP automaticamente
   var pLoader = (function(){
@@ -2155,8 +2130,8 @@ function buildHlsConfig(isLive) {
         if(needProxy && isManifest && !u.includes('workers.dev')) {
           // Manifest → Worker (texto leve, OK no Cloudflare free)
           ctx.url = _cpx_proxyBase + encodeURIComponent(u.replace(/^http:/,'https:'));
-        } else if(isSegment) {
-          // Segmento → HTTPS direto (vídeo pesado, sem Worker)
+        } else if(isSegment && !u.includes('workers.dev')) {
+          // Segmento → HTTPS direto (vídeo pesado, não passa pelo Worker)
           ctx.url = u.replace(/^http:/,'https:');
         }
       }
@@ -2170,29 +2145,16 @@ function buildHlsConfig(isLive) {
     loader: pLoader,
     xhrSetup: function(xhr, url) {
       xhr.withCredentials = false;
-      var ua = window._cpx_uaMask || 'Mozilla/5.0 (SMART-TV; Linux; Tizen 7.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/7.0 TV Safari/538.1';
-      try { xhr.setRequestHeader('User-Agent', ua); } catch(_){}
+      // User-Agent não pode ser setado via XHR no browser (bloqueado por segurança)
+      // O Worker já envia UA correto de Smart TV para o servidor IPTV
     },
   };
 
-  // ── Buffer Dinâmico baseado na RAM ──
-  function getRAM(){ return navigator.deviceMemory || (/Tizen|SMART-TV/i.test(navigator.userAgent)?1.5:/Android/i.test(navigator.userAgent)?2:4); }
-  function calcBuf(ram){ return Math.max(60,Math.min(14400,Math.floor(ram*1024*0.15/2.5))); }
-
   if(!isLive) {
-    var ram=getRAM(), maxBuf=calcBuf(ram), backBuf=Math.min(maxBuf,300);
-    if(!window._cpx_bufToast){
-      window._cpx_bufToast=true;
-      var mins=Math.floor(maxBuf/60);
-      var lbl=mins>=60?(Math.floor(mins/60)+'h '+(mins%60?mins%60+'min':'')):(mins+'min');
-      setTimeout(()=>toast('💾 Buffer: '+lbl+' · RAM: '+ram+'GB','ok'),1200);
-    }
+    // VOD config
     return Object.assign({}, baseCfg, {
-      lowLatencyMode:false,
-      backBufferLength:backBuf, maxBufferLength:maxBuf, maxMaxBufferLength:maxBuf*2,
-      maxBufferSize:ram*1024*0.15*1000*1000,
-      startLevel:-1, abrEwmaDefaultEstimate:3000000,
-      abrBandWidthFactor:0.9, abrBandWidthUpFactor:0.7,
+      backBufferLength:120, maxBufferLength:120, maxMaxBufferLength:240,
+      startLevel:-1, abrEwmaDefaultEstimate:2000000,
       manifestLoadingTimeOut:15000, manifestLoadingMaxRetry:4,
       levelLoadingTimeOut:15000, fragLoadingTimeOut:25000,
       fragLoadingMaxRetry:6, fragLoadingRetryDelay:500,
@@ -2226,6 +2188,7 @@ function loadUrl(idx) {
   if (hls) { hls.destroy(); hls = null; }
   v.src = '';
   v.muted = isMuted;
+  v.volume = 1.0; // Garantir volume máximo — autoplay policy pode resetar
 
   // ── HLS nativo (Safari, webOS, Tizen, Samsung) ──
   var canNative = !!(v.canPlayType && (v.canPlayType('application/vnd.apple.mpegurl') || v.canPlayType('application/x-mpegURL')));
@@ -2267,7 +2230,14 @@ function loadUrl(idx) {
 
     // Qualidade
     hls.on(Hls.Events.MANIFEST_PARSED, (_, d) => {
-      v.play().catch(() => {});
+      // Garantir áudio desbloqueado antes do play
+      v.volume = 1.0;
+      if (!isMuted) v.muted = false;
+      v.play().then(function(){
+        if (!isMuted) { v.muted = false; v.volume = 1.0; }
+      }).catch(function(e){
+        console.warn('Autoplay:', e.message);
+      });
       showPlayerSpinner(false);
       mediaErrCount = 0;
       isPlaying = true;
@@ -2389,30 +2359,16 @@ function loadUrl(idx) {
     if (v.buffered.length) { const pct=(v.buffered.end(v.buffered.length-1)/(v.duration||1))*100; document.getElementById('pl-buf-fill').style.width=Math.min(pct,100)+'%'; }
     updateSeekBar();
     if (isVOD) autoSavePos();
-    // Badge de cache (atualiza a cada 10s para não travar)
-    if(isVOD && !v._badgeThrottle){ v._badgeThrottle=true; setTimeout(()=>{v._badgeThrottle=false;updateCacheBadge(v);},10000); updateCacheBadge(v); }
   };
-
-function updateCacheBadge(v){
-  try{
-    if(!v||!v.buffered||!v.buffered.length||!isVOD)return;
-    var ahead=Math.max(0,v.buffered.end(v.buffered.length-1)-v.currentTime);
-    var mins=Math.floor(ahead/60);
-    var badge=document.getElementById('pl-cache-badge');
-    if(!badge){
-      badge=document.createElement('div');badge.id='pl-cache-badge';
-      badge.style.cssText='position:absolute;bottom:108px;right:56px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:4px 10px;font-size:12px;color:rgba(255,255,255,.55);pointer-events:none;z-index:5;display:none;';
-      document.getElementById('player-page').appendChild(badge);
-    }
-    if(mins>0){
-      var lbl=mins>=60?(Math.floor(mins/60)+'h '+(mins%60?mins%60+'min':'')):(mins+' min');
-      badge.textContent='⬛ '+lbl+' em cache';badge.style.display='';
-    } else badge.style.display='none';
-  }catch(_){}
-}
 }
 
-function closePlayer(){document.getElementById('player-page').classList.remove('show');}
+function closePlayer(){
+  const pp=document.getElementById('player-page');
+  pp.classList.remove('show');
+  pp.classList.remove('cursor-hidden');
+  clearTimeout(_cursorTimer);
+  _cursorTimer=null;
+}
 function backToApp(){stopPlayer();hideEPG();clearTimeout(epgTimer);closePlayer();}
 function stopPlayer(){if(hls){hls.destroy();hls=null;}const v=document.getElementById('player-video');v.pause();v.src='';v.load();clearTimeout(overlayTimer);clearTimeout(savePosTimer);closeResume();hideQualityPanel();hideTracksPanel();}
 function setPlayerInfo(title,sub,thumb,isLive){document.getElementById('pl-title').textContent=title;const subEl=document.getElementById('pl-sub');subEl.innerHTML=isLive?'<span class="live-badge">● AO VIVO</span>':(sub?esc(sub):'');const img=document.getElementById('pl-thumb');img.src=resolveChannelLogo(title||'?',thumb||'');img.style.display='block';img.onerror=()=>{img.src=genChannelAvatar(title||'?');img.onerror=null;};document.getElementById('pl-pos').textContent=!isVOD?`${curItemIdx+1}/${visItems.length}`:''; }
@@ -2591,10 +2547,8 @@ function showOverlay(){
   const pp=document.getElementById('player-page');
   ui.classList.add('vis');
   pp.classList.remove('cursor-hidden');
-  // Overlay UI some em 5s
   clearTimeout(overlayTimer);
   overlayTimer=setTimeout(()=>{ui.classList.remove('vis');hideQualityPanel();hideTracksPanel();},5000);
-  // Cursor some em 15s (timer separado)
   clearTimeout(_cursorTimer);
   _cursorTimer=setTimeout(()=>{ pp.classList.add('cursor-hidden'); },15000);
 }
@@ -2604,9 +2558,32 @@ function toggleOverlay(){
     ui.classList.remove('vis');
     clearTimeout(overlayTimer);
     hideQualityPanel();hideTracksPanel();
-    // cursor segue seu próprio timer de 15s — não ocultar imediatamente
   } else showOverlay();
 }
+// ── Unlock de áudio (Chrome autoplay policy) ─────────────────────────
+// Chrome bloqueia áudio até o usuário interagir — desbloqueia no 1º clique
+var _audioUnlocked = false;
+function unlockAudio() {
+  if (_audioUnlocked) return;
+  _audioUnlocked = true;
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) {
+      var ctx = new AC();
+      var buf = ctx.createBuffer(1,1,22050);
+      var src = ctx.createBufferSource();
+      src.buffer = buf; src.connect(ctx.destination); src.start(0);
+      ctx.resume().catch(function(){});
+    }
+  } catch(e) {}
+  // Garante volume e sem mute
+  var v = document.getElementById('player-video');
+  if (v) { v.volume = 1.0; if (!isMuted) v.muted = false; }
+}
+document.addEventListener('click', unlockAudio, { once: true, capture: true });
+document.addEventListener('keydown', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
+
 document.getElementById('player-video').addEventListener('click',toggleOverlay);
 document.getElementById('player-page').addEventListener('mousemove',showOverlay);
 document.getElementById('player-page').addEventListener('click',e=>{const qp=document.getElementById('quality-panel');const tp=document.getElementById('tracks-panel');if(!qp.contains(e.target)&&!document.getElementById('quality-btn').contains(e.target))qp.classList.remove('show');if(!tp.contains(e.target)&&!document.getElementById('tracks-btn').contains(e.target))tp.classList.remove('show');});

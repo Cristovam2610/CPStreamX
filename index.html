@@ -1364,16 +1364,21 @@ async function checkSavedSession() {
     CFG={server:srv.url,user:srv.iptv_user,pass:srv.iptv_pass,isM3U:false};
     currentUser.ts=Date.now();tvSet('stv_session',JSON.stringify(currentUser));
     renewSession();
-    // Verificar plataforma salva
+    // Verificar plataforma salva — auto-detecta se não tiver
     var savedPlatform = tvGet('stv_platform');
     if(savedPlatform && typeof PLATFORMS !== 'undefined' && PLATFORMS[savedPlatform]){
       CURRENT_PLATFORM = PLATFORMS[savedPlatform];
       CURRENT_PLATFORM.id = savedPlatform;
       applyPlatformSettings(CURRENT_PLATFORM);
-      document.getElementById('app').classList.add('show');
     } else {
-      showPlatformPage();
+      // Auto-detecta plataforma sem mostrar tela de seleção
+      var auto = autoDetectPlatform();
+      CURRENT_PLATFORM = PLATFORMS[auto] || PLATFORMS['pc'];
+      CURRENT_PLATFORM.id = auto;
+      tvSet('stv_platform', auto);
+      applyPlatformSettings(CURRENT_PLATFORM);
     }
+    document.getElementById('app').classList.add('show');
     if(saved.isAdmin)document.getElementById('btn-admin').style.display='';
     updateServerSelectorUI(saved.srvIdx||0);selectSection('favs');
     toast('Bem-vindo de volta, '+(saved.name||saved.username)+'! ✅','ok');
@@ -1538,10 +1543,10 @@ let m3uItems=[];
 let catItemsCache={};
 
 const SERVERS=[
-  {label:'CPStreamTV-S1',url:'https://toppcard.fun',user:'venrkdml7n02',pass:'SUA_SENHA'},
-  {label:'CPStreamTV-S2',url:'http://streams4k.xyz',user:'venrkdml7n02',pass:'SUA_SENHA'},
-  {label:'CPStreamTV-S3',url:'https://streams4k.xyz',user:'venrkdml7n02',pass:'SUA_SENHA'},
-  {label:'CPStreamTV-S4',url:'http://g2026.sbs',user:'venrkdml7n02',pass:'SUA_SENHA'},
+  {label:'CPStreamTV-S1',url:'https://toppcard.fun',    user:'venrkdml7n02',pass:'71985344834'},
+  {label:'CPStreamTV-S2',url:'http://streams4k.xyz',    user:'venrkdml7n02',pass:'71985344834'},
+  {label:'CPStreamTV-S3',url:'https://streams4k.xyz',   user:'venrkdml7n02',pass:'71985344834'},
+  {label:'CPStreamTV-S4',url:'http://g2026.sbs',        user:'venrkdml7n02',pass:'71985344834'},
 ];
 let selectedSrv=-1;
 
@@ -1551,21 +1556,34 @@ function togglePassVis(){const input=document.getElementById('f-pass');const btn
 function doExitApp(){doAuthLogout();}
 
 function buildProxyUrls(url){
+  // cors-anywhere format: https://proxy.url/https://original-url (sem encoding)
   var httpsUrl = url.replace(/^http:/,'https:');
-  // IMPORTANTE: encodeURIComponent encoda TUDO incluindo & ? = da query string
-  var encoded  = encodeURIComponent(url);
-  var encodedH = encodeURIComponent(httpsUrl);
-  var W = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
+  var R = 'https://cpstream-proxy.onrender.com/';
+
   if(location.protocol === 'https:' || window._cpx_useProxy){
     return [
-      W + encodedH,  // Worker + HTTPS encodado corretamente
-      W + encoded,   // Worker + HTTP encodado
-      httpsUrl,      // HTTPS direto
-      url
+      R + httpsUrl,   // Render proxy + HTTPS
+      R + url,        // Render proxy + HTTP
+      httpsUrl,       // direto HTTPS
+      url             // direto HTTP
     ];
   }
-  return [url, httpsUrl, W + encoded];
+  return [url, httpsUrl, R + url];
 }
+
+// ── Keep-alive: acorda o Render.com antes do usuário precisar ──
+(function keepAliveRender(){
+  var PROXY = 'https://cpstream-proxy.onrender.com/';
+  function ping(){
+    try{
+      var img = new Image();
+      img.src = PROXY + 'https://toppcard.fun/player_api.php?action=test&_t=' + Date.now();
+    }catch(_){}
+  }
+  // Pinga imediatamente ao carregar e a cada 14 minutos
+  setTimeout(ping, 1000);
+  setInterval(ping, 14 * 60 * 1000);
+})();
 
 window.addEventListener('load',async()=>{
   try{loadFavs();}catch(_){}
@@ -2037,17 +2055,15 @@ function liveUrls(id){
   const b   = s.replace(/\/+$/,'');
   const hs  = b.replace(/^http:/,'https:');
   const hp  = b.replace(/^https:/,'http:');
-  const W   = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
+  const R   = 'https://cpstream-proxy.onrender.com/';
   const hsM3u8 = hs+'/live/'+u+'/'+p+'/'+id+'.m3u8';
   const m3u8   = b +'/live/'+u+'/'+p+'/'+id+'.m3u8';
   const hpM3u8 = hp+'/live/'+u+'/'+p+'/'+id+'.m3u8';
   const hpTs   = hp+'/live/'+u+'/'+p+'/'+id+'.ts';
-  // Worker APENAS para o manifest .m3u8 (texto leve — OK no Cloudflare free)
-  // Fragmentos .ts → HTTPS direto (vídeo pesado — proibido no Cloudflare free)
   return [
-    W+encodeURIComponent(hsM3u8),  // manifest via Worker
-    W+encodeURIComponent(m3u8),    // manifest via Worker (fallback http)
-    hsM3u8, m3u8,                  // direto HTTPS/HTTP (TV nativa sem CORS)
+    R+hsM3u8,   // manifest via Render proxy (HTTPS)
+    R+m3u8,     // manifest via Render proxy (HTTP)
+    hsM3u8, m3u8,
     hpM3u8, hpTs,
     b+'/live/'+u+'/'+p+'/'+id,
   ];
@@ -2103,14 +2119,15 @@ function openPlayer(urls,resumePos){document.getElementById('player-page').class
 // Necessário porque o manifest .m3u8 aponta para URLs HTTP
 // que o Chrome bloqueia quando a página está em HTTPS
 // ═══════════════════════════════════════════════════════════
-var _cpx_proxyBase = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-var _cpx_proxyAlt  = 'https://cpstreamx-proxy.criador-mql5.workers.dev/?url=';
-var _cpx_proxyFail = {}; // rastreia proxies que falharam
+var _cpx_proxyBase = 'https://cpstream-proxy.onrender.com/';
+var _cpx_proxyAlt  = 'https://cpstream-proxy.onrender.com/';
+var _cpx_proxyFail = {};
 
 function cpxProxyUrl(url, useAlt) {
   if(!url || !url.startsWith('http://')) return url;
   var base = useAlt ? _cpx_proxyAlt : _cpx_proxyBase;
-  return base + encodeURIComponent(url);
+  // cors-anywhere: proxy/https://url (sem encoding)
+  return base + url.replace(/^http:/,'https:');
 }
 
 function buildHlsConfig(isLive) {

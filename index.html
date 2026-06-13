@@ -433,6 +433,97 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 .hpop-label{font-weight:600;font-size:13px;}
 .hpop-sub{font-size:11px;color:var(--muted);}
 
+/* ── MINI PLAYER PiP FLUTUANTE (TV / Android Box) ── */
+#pip-mini{
+  position:fixed;z-index:1500;
+  width:240px;height:135px;
+  bottom:20px;right:20px;
+  background:#000;
+  border:2px solid var(--accent);
+  border-radius:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,.9);
+  display:none;overflow:hidden;
+  touch-action:none; /* necessário para pointer events de drag */
+}
+#pip-mini.show{display:block;}
+#pip-mini-video{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;}
+#pip-mini-controls{
+  position:absolute;inset:0;
+  background:rgba(0,0,0,.55);
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  opacity:0;transition:opacity .2s;
+}
+#pip-mini:hover #pip-mini-controls,
+#pip-mini.touch-show #pip-mini-controls{opacity:1;}
+.pip-btn{
+  background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);
+  border-radius:50%;width:34px;height:34px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;cursor:pointer;color:#fff;transition:background .1s;
+  -webkit-tap-highlight-color:transparent;
+}
+.pip-btn:active{background:rgba(255,255,255,.38);}
+#pip-drag-handle{
+  position:absolute;top:0;left:0;right:0;height:20px;
+  cursor:grab;background:rgba(36,54,211,.25);
+  display:flex;align-items:center;justify-content:center;
+}
+#pip-drag-handle::after{
+  content:'';display:block;width:28px;height:3px;
+  border-radius:2px;background:rgba(255,255,255,.4);
+}
+
+/* ── TIMER DE DESLIGAMENTO ── */
+#sleep-timer-btn{} /* herdado do .pl-act */
+#sleep-menu{
+  position:absolute;bottom:80px;left:12px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);min-width:220px;
+  display:none;box-shadow:0 10px 40px rgba(0,0,0,.9);z-index:50;
+  overflow:hidden;
+}
+#sleep-menu.show{display:block;}
+.sleep-menu-title{
+  padding:10px 16px;font-size:11px;font-weight:700;
+  color:var(--muted);text-transform:uppercase;letter-spacing:1px;
+  border-bottom:1px solid var(--border);
+}
+.sleep-opt{
+  padding:12px 16px;font-size:14px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;
+  color:var(--text);transition:background .12s;
+}
+.sleep-opt:hover{background:rgba(255,255,255,.06);}
+.sleep-opt.active{color:var(--accent);font-weight:700;}
+.sleep-opt.cancel-opt{color:var(--accent2);border-top:1px solid var(--border);}
+/* Countdown badge no canto do player */
+#sleep-countdown-badge{
+  position:absolute;top:14px;left:14px;
+  background:rgba(36,54,211,.85);border:1px solid var(--accent);
+  border-radius:8px;padding:5px 12px;
+  font-size:13px;color:#fff;font-family:'Oswald',sans-serif;
+  letter-spacing:.5px;pointer-events:none;z-index:15;
+  display:none;
+}
+#sleep-countdown-badge.show{display:block;}
+/* Tela preta de encerramento */
+#sleep-blackout{
+  position:fixed;inset:0;z-index:9998;
+  background:#000;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:20px;
+}
+#sleep-blackout.show{display:flex;}
+.sleep-bl-msg{
+  font-family:'Oswald',sans-serif;font-size:26px;
+  color:rgba(255,255,255,.7);letter-spacing:2px;text-align:center;
+}
+.sleep-bl-sub{font-size:14px;color:rgba(255,255,255,.35);text-align:center;}
+.sleep-bl-btn{
+  background:var(--accent);color:#fff;border:none;
+  border-radius:var(--r);padding:13px 32px;
+  font-family:'Oswald',sans-serif;font-size:18px;letter-spacing:1px;cursor:pointer;
+}
+
 /* ── TOAST ── */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:var(--r);font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:88vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.5);}
 #toast.show{opacity:1;}
@@ -610,6 +701,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Source
 .cat-item.locked-adult::after{content:'🔒';margin-left:6px;font-size:12px;}
 
 
+/* ── PRÓXIMO EPISÓDIO ── */
+#next-ep-btn{
+  position:fixed;bottom:90px;right:14px;
+  background:rgba(10,10,15,.88);border:1px solid var(--accent);
+  border-radius:12px;padding:10px 16px 10px 13px;
+  display:none;align-items:center;gap:10px;
+  cursor:pointer;z-index:60;
+  animation:next-ep-in .3s ease;
+  max-width:260px;
+}
+#next-ep-btn.show{display:flex;}
+@keyframes next-ep-in{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.nep-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;line-height:1;}
+.nep-title{font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;}
+.nep-arrow{font-size:20px;color:var(--accent);flex-shrink:0;}
+.nep-close{position:absolute;top:4px;right:6px;font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 4px;line-height:1;}
+
 /* ── TRIAL 24H ── */
 #trial-modal{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.97);display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:40px;}
 #trial-modal.show{display:flex;}
@@ -766,7 +874,7 @@ function hideInstallModal(){
           </div>
           <div class="adm-row">
             <div class="adm-field"><label>Dispositivos simultâneos</label>
-              <select id="adm-devices"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="5">5</option><option value="10">10</option></select>
+              <select id="adm-devices"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
             </div>
             <div class="adm-field" style="justify-content:flex-end;padding-top:18px">
               <button class="adm-btn" onclick="createUser()">✚ Criar Acesso</button>
@@ -939,6 +1047,8 @@ function hideInstallModal(){
         <button class="pl-act" id="sub-act" onclick="toggleSubMenu()" title="Legendas">CC</button>
         <button class="pl-act" id="mute-act" onclick="toggleMute()">🔊</button>
         <button class="pl-act" id="zoom-act" onclick="cycleZoom()">⛶ Zoom</button>
+        <button class="pl-act" id="pip-act" onclick="togglePip()" title="Picture in Picture">⧉ PiP</button>
+        <button class="pl-act" id="sleep-timer-btn" onclick="toggleSleepMenu()" title="Timer de desligamento">⏱</button>
         <button class="pl-act" onclick="navBack()">← Voltar</button>
         <button class="pl-act" onclick="stopAndClosePlayer();goFavsSection()">⌂ Home</button>
       </div>
@@ -968,6 +1078,47 @@ function hideInstallModal(){
     </div>
   </div>
   <div id="pl-buf-bar"><div id="pl-buf-fill"></div></div>
+
+  <!-- ── Sleep Timer countdown badge ── -->
+  <div id="sleep-countdown-badge">⏱ --:--</div>
+
+  <!-- ── Sleep menu (opções de timer) ── -->
+  <div id="sleep-menu">
+    <div class="sleep-menu-title">⏱ Timer de desligamento</div>
+    <div class="sleep-opt" onclick="setSleepTimer(10)">10 minutos</div>
+    <div class="sleep-opt" onclick="setSleepTimer(30)">30 minutos</div>
+    <div class="sleep-opt" onclick="setSleepTimer(60)">1 hora</div>
+    <div class="sleep-opt" onclick="setSleepTimer(90)">1h 30min</div>
+    <div class="sleep-opt" onclick="setSleepTimer(120)">2 horas</div>
+    <div class="sleep-opt cancel-opt" id="sleep-cancel-opt" style="display:none" onclick="cancelSleepTimer()">❌ Cancelar timer</div>
+  </div>
+</div>
+
+<!-- ── Próximo Episódio ── -->
+<div id="next-ep-btn" onclick="playNextEpisode()">
+  <button class="nep-close" onclick="event.stopPropagation();_nextEpDismissed=true;hideNextEpBtn()" title="Fechar">✕</button>
+  <div class="nep-arrow">⏭</div>
+  <div style="min-width:0;">
+    <div class="nep-label">Próximo episódio</div>
+    <div class="nep-title" id="nep-title">—</div>
+  </div>
+</div>
+
+<!-- ── Sleep Blackout Screen ── -->
+<div id="sleep-blackout">
+  <div class="sleep-bl-msg">⏱ Timer encerrado</div>
+  <div class="sleep-bl-sub">Toque para continuar assistindo</div>
+  <button class="sleep-bl-btn" onclick="dismissBlackout()">▶ Continuar</button>
+</div>
+
+<!-- ── Mini PiP Player Flutuante ── -->
+<div id="pip-mini">
+  <div id="pip-drag-handle"></div>
+  <video id="pip-mini-video" autoplay playsinline webkit-playsinline muted></video>
+  <div id="pip-mini-controls">
+    <div class="pip-btn" id="pip-pp-btn" onclick="pipTogglePlay()">⏸</div>
+    <div class="pip-btn" onclick="closePip()">✕</div>
+  </div>
 </div>
 
 <!-- VOD MODAL -->
@@ -1077,6 +1228,9 @@ let zoomIdx=0;
 let favorites=[],watchHistory=[];
 let modalItem=null,modalType='';
 let seriesData=null,curSeason='';
+let _curEpList=[],_curEpIdx=-1; // rastreio do episódio atual para "próximo"
+let _nextEpTimer=null,_nextEpDismissed=false;
+let _histSeekOnLoad=0; // posição a aplicar automaticamente ao carregar (modo resume)
 let histPopupItem=null;
 const navStack=[];
 
@@ -1097,7 +1251,22 @@ function initPlayerRefs(){
 }
 function clearPlayerRefs(){ _pel={}; }
 
-const UA='Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1';
+// ── User-Agent dinâmico por plataforma ──
+const UA=(function(){
+  const raw=navigator.userAgent||'';
+  // Samsung Tizen
+  if(/Tizen/i.test(raw))return'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1';
+  // LG webOS
+  if(/Web0S|webOS/i.test(raw))return'Mozilla/5.0 (SMART-TV; Linux; NetCast) AppleWebKit/538.1 (KHTML, like Gecko) SmartTV/6.0';
+  // Android TV / Google TV / Fire TV
+  if(/Android/i.test(raw))return'Mozilla/5.0 (Linux; Android 9; AndroidTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36';
+  // Desktop (PC / Mac)
+  if(/Windows|Macintosh/i.test(raw))return'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  // iOS / iPhone
+  if(/iPhone|iPad/i.test(raw))return'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+  // Fallback genérico
+  return'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+})();
 const SMETA={
   live:   {icon:'📺',label:'Ao Vivo',   catA:'get_live_categories',   itemA:'get_live_streams'},
   movies: {icon:'🎬',label:'Filmes',    catA:'get_vod_categories',    itemA:'get_vod_streams'},
@@ -1628,7 +1797,8 @@ function renderFavVOD(){
     card.innerHTML+=`<div class="vod-info"><div class="vod-title">${esc(fav.name)}</div><div class="vod-meta" style="color:var(--gold)">★ Fav</div></div>`;
     card.onclick=()=>{
       if(fav.type==='live'){const ch=getLiveChById(fav.sid)||{stream_id:fav.sid,name:fav.name,stream_icon:fav.icon};playLive(ch);}
-      else openVodModal({stream_id:fav.sid,series_id:fav.sid,name:fav.name,stream_icon:fav.icon},fav.type);
+      else if(fav.type==='series'){openEpModal({stream_id:fav.sid,series_id:fav.sid,name:fav.name,stream_icon:fav.icon});}
+      else{playMovie({stream_id:fav.sid,name:fav.name,stream_icon:fav.icon,container_extension:''});}
     };
     grid.appendChild(card);
   });
@@ -1694,9 +1864,20 @@ function closeHistPopup(){document.getElementById('hist-popup-overlay').classLis
 function histPlayFrom(mode){
   const h=histPopupItem;closeHistPopup();if(!h)return;
   if(h.section==='live'){const ch=getLiveChById(h.id)||{stream_id:h.id,name:h.name,stream_icon:h.icon};playLive(ch);return;}
-  if(mode==='start')tvDel(posKey(h.id));
+  if(mode==='start'){tvDel(posKey(h.id));_histSeekOnLoad=0;}
+  else _histSeekOnLoad=getSavedPos(h.id); // seta ANTES de chamar play, para openPlayer saber
   const item={stream_id:h.id,series_id:h.id,name:h.name,stream_icon:h.icon,container_extension:h.ext||'mp4'};
-  if(h.section==='series')openEpModal(item);else playMovie(item);
+  if(h.section==='series'){
+    isVOD=true;
+    setPlHeader(h.name,false,h.icon);
+    pItem={stream_id:h.id,name:h.name,stream_icon:h.icon,_type:'series'};
+    updateFavAct();
+    addToHistory({stream_id:h.id,name:h.name,stream_icon:h.icon,container_extension:h.ext||'mkv'},'series');
+    hideNextEpBtn();_nextEpDismissed=false;
+    openPlayer(buildEpUrls(h.id,h.ext||'mkv'),0);
+    return;
+  }
+  playMovie(item,true); // _fromHist=true: não zera _histSeekOnLoad
 }
 function histDelete(){if(!histPopupItem)return;const id=histPopupItem.id;closeHistPopup();removeFromHistory(id);}
 
@@ -1927,7 +2108,7 @@ async function openEpModal(series){
 function renderEps(list){
   const el=document.getElementById('ep-list');el.innerHTML='';
   if(!list.length){el.innerHTML='<div class="g-msg"><p>Sem episódios.</p></div>';return;}
-  list.forEach(ep=>{const row=document.createElement('div');row.className='ep-row';row.innerHTML=`<span class="ep-n">E${ep.episode_num||'?'}</span><span class="ep-name">${esc(ep.title||'Episódio '+ep.episode_num)}</span><span class="ep-dur">${ep.info?.duration||''}</span><span class="ep-play">▶</span>`;row.onclick=()=>playEpisode(ep);el.appendChild(row);});
+  list.forEach((ep,i)=>{const row=document.createElement('div');row.className='ep-row';row.innerHTML=`<span class="ep-n">E${ep.episode_num||'?'}</span><span class="ep-name">${esc(ep.title||'Episódio '+ep.episode_num)}</span><span class="ep-dur">${ep.info?.duration||''}</span><span class="ep-play">▶</span>`;row.onclick=()=>playEpisode(ep,list,i);el.appendChild(row);});
 }
 function closeEpModal(){document.getElementById('ep-modal').classList.remove('show');}
 
@@ -1961,7 +2142,8 @@ const SOURCES_CONFIG={
     {id:'sbt',
      keywords:['sbt'],
      url:'https://cdn.jmvstream.com/w/LVW-10801/LVW10801_Xvg4R0u57n/playlist.m3u8',
-     backup:'https://cdn.live.br1.jmvstream.com/w/LVW-9359/LVW9359_XSyReL0QVf/playlist.m3u8',
+     backup:'https://d3rlna7iyyu8wu.cloudfront.net/skip_armstrong/skip_armstrong_stereo_hls.m3u8',
+     backup2:'https://cdn.live.br1.jmvstream.com/w/LVW-9359/LVW9359_XSyReL0QVf/playlist.m3u8',
      label:'SBT (aberto)', fallbackToIPTV:true},
 
     // ── BAND ─────────────────────────────────────────────────────────────────
@@ -2118,7 +2300,7 @@ function _matchOpenChannel(name){
   return null;
 }
 function _routeOpenChannel(ch){
-  const urls=[ch.url];if(ch.backup)urls.push(ch.backup);
+  const urls=[ch.url];if(ch.backup)urls.push(ch.backup);if(ch.backup2)urls.push(ch.backup2);
   return{type:CONTENT_TYPE.OPEN,urls,label:ch.label,badge:'🟢 Aberto',skipIPTV:true,fallbackToIPTV:!!ch.fallbackToIPTV};
 }
 function _routeVOD(item){
@@ -2218,6 +2400,7 @@ function buildEpUrls(id,ext){const{server:s,user:u,pass:p}=CFG;const b=s.replace
 // PLAYER — PLAY
 // ══════════════════════════════════════════════════════════════
 function playLive(ch){
+  _histSeekOnLoad=0;
   isVOD=false;pItem=ch;pItem._type='live';
   setPlHeader(ch.name,true,ch.stream_icon);updateFavAct();
   document.getElementById('pl-epg').style.display='none';
@@ -2242,31 +2425,42 @@ function playLive(ch){
   openPlayer(_liveUrls,0);
   setTimeout(()=>loadEPG(ch.stream_id),1500);
 }
-function playMovie(item){
+function playMovie(item,_fromHist){
+  if(!_fromHist)_histSeekOnLoad=0;
   isVOD=true;pItem=item;pItem._type='movies';
   const saved=JSON.parse(tvGet(posKey(item.stream_id))||'null');
   setPlHeader(item.name||item.title,false,item.stream_icon||item.cover);updateFavAct();
   addToHistory(item,'movies');
   openPlayer(buildMovieUrls(item.stream_id,item.container_extension),saved?.t||0);
 }
-function playEpisode(ep){
+function playEpisode(ep,epList,epIdx,_fromHist){
+  if(!_fromHist)_histSeekOnLoad=0;
   closeEpModal();closeVodModal();isVOD=true;
+  // Rastreia lista completa de episódios para o botão "Próximo"
+  if(epList&&epIdx!==undefined){_curEpList=epList;_curEpIdx=epIdx;}
   const title=(modalItem?.name||'')+' · T'+curSeason+'E'+(ep.episode_num||'?')+' '+(ep.title||'');
   const icon=seriesData?.info?.cover||'';
   pItem={stream_id:ep.id,name:title,stream_icon:icon,_type:'series'};
   const saved=JSON.parse(tvGet(posKey(ep.id))||'null');
   setPlHeader(title,false,icon);updateFavAct();
-  addToHistory({stream_id:ep.id,name:title,stream_icon:icon},'series');
+  addToHistory({stream_id:ep.id,name:title,stream_icon:icon,container_extension:ep.container_extension||'mkv'},'series');
+  hideNextEpBtn();_nextEpDismissed=false;
   openPlayer(buildEpUrls(ep.id,ep.container_extension),saved?.t||0);
 }
 
 function openPlayer(urls,resumePos){
   _pushNavState();
   document.getElementById('player-page').classList.add('show');
-  initPlayerRefs(); // cacheia referências DOM — evita getElementById a cada frame
+  initPlayerRefs();
   pUrls=urls;pIdx=0;mErr=0;
   showPlSpin(true);showPlErr(false);closeResume();
-  if(resumePos&&resumePos>5){document.getElementById('resume-yes-btn').dataset.pos=resumePos;document.getElementById('resume-bar').classList.add('show');}
+  // Se _histSeekOnLoad estiver definido, aplica direto sem barra de confirmação
+  if(_histSeekOnLoad>5){
+    // não mostra resume-bar; o seek será aplicado no onloadedmetadata/MANIFEST_PARSED
+  } else if(resumePos&&resumePos>5){
+    document.getElementById('resume-yes-btn').dataset.pos=resumePos;
+    document.getElementById('resume-bar').classList.add('show');
+  }
   loadUrl(0);showOverlay();
 }
 
@@ -2358,6 +2552,20 @@ function loadUrl(idx){
     });
     hls.loadSource(url);
     hls.attachMedia(v);
+    // ── Melhoria 1: Trava qualidade máxima em HD (≤720p) ──
+    // Melhora fluidez em conexões medianas sem alterar a badge exibida ao usuário
+    hls.on(Hls.Events.MANIFEST_PARSED, function(_ev, data) {
+      var lvls = data.levels || [];
+      if (lvls.length > 1) {
+        var hdMax = -1;
+        for (var _li = 0; _li < lvls.length; _li++) {
+          if ((lvls[_li].height || 9999) <= 720) hdMax = _li;
+        }
+        // Se encontrou pelo menos um nível HD, trava o ABR nele
+        if (hdMax >= 0) hls.autoLevelCapping = hdMax;
+        // Se todos os níveis são FHD+ (stream sem HD), deixa livre (hdMax=-1 → sem capping)
+      }
+    });
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{
       clearTimeout(_streamErrTimer);showPlErr(false);
       v.play().catch(()=>{});
@@ -2379,6 +2587,12 @@ function loadUrl(idx){
       setTimeout(initSubtitles,800);
       // Mostra indicador de buffer apenas para VOD
       if(isVOD)showBufIndicator(bc);
+      // Seek automático do histórico (resume direto, sem barra de confirmação)
+      if(_histSeekOnLoad>5){
+        const _seekPos=_histSeekOnLoad;_histSeekOnLoad=0;
+        const _doSeek=()=>{if(v.readyState>=1)v.currentTime=_seekPos;else setTimeout(_doSeek,300);};
+        setTimeout(_doSeek,400);
+      }
     });
     hls.on(Hls.Events.AUDIO_TRACKS_UPDATED,()=>buildAudioMenu());
     hls.on(Hls.Events.FRAG_BUFFERED,()=>{
@@ -2400,6 +2614,7 @@ function loadUrl(idx){
       buildAudioMenu();
       initSubtitles();
       if(isVOD)showBufIndicator(detectBufferCapacity());
+      if(_histSeekOnLoad>5){v.currentTime=_histSeekOnLoad;_histSeekOnLoad=0;}
     };
     v.play().catch(function(){setTimeout(function(){loadUrl(pIdx+1);},300);});
   }
@@ -2419,6 +2634,7 @@ function loadUrl(idx){
   v.ontimeupdate=()=>{
     updateSmartBufBar(v);
     updateSeek();if(isVOD)autoSavePos();
+    _checkNextEp();
   };
   v.onerror=()=>{if(!hls)loadUrl(pIdx+1);};
 }
@@ -2449,6 +2665,7 @@ function stopAndClosePlayer(){
   document.getElementById('player-page').classList.remove('show');
   document.getElementById('pl-epg').style.display='none';
   _subOff();hideSubMenu();
+  hideNextEpBtn();_nextEpDismissed=false;_histSeekOnLoad=0;
   clearPlayerRefs(); // libera refs ao fechar
 }
 
@@ -2512,6 +2729,43 @@ function updateSeek(){
 function seekClick(e){const v=document.getElementById('player-video');if(!v.duration||isNaN(v.duration))return;const r=document.getElementById('pl-seek-track').getBoundingClientRect();v.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*v.duration;e.stopPropagation();showOverlay();}
 function doResume(){closeResume();const pos=parseFloat(document.getElementById('resume-yes-btn').dataset.pos||0);const v=document.getElementById('player-video');const seek=()=>{if(v.readyState>=1)v.currentTime=pos;else setTimeout(seek,300);};seek();}
 function closeResume(){document.getElementById('resume-bar').classList.remove('show');}
+
+// ══════════════════════════════════════════════════════════════
+// PRÓXIMO EPISÓDIO
+// ══════════════════════════════════════════════════════════════
+function showNextEpBtn(){
+  if(_nextEpDismissed)return;
+  const next=_curEpList[_curEpIdx+1];
+  if(!next)return;
+  const label='E'+(next.episode_num||(_curEpIdx+2))+' '+(next.title||'');
+  document.getElementById('nep-title').textContent=label;
+  document.getElementById('next-ep-btn').classList.add('show');
+}
+function hideNextEpBtn(){
+  document.getElementById('next-ep-btn').classList.remove('show');
+  clearTimeout(_nextEpTimer);_nextEpTimer=null;
+}
+function playNextEpisode(){
+  hideNextEpBtn();
+  const next=_curEpList[_curEpIdx+1];
+  if(!next)return;
+  playEpisode(next,_curEpList,_curEpIdx+1);
+}
+function _checkNextEp(){
+  if(!isVOD||pItem?._type!=='series')return;
+  if(_curEpIdx<0||_curEpIdx>=_curEpList.length-1)return; // sem próximo
+  if(_nextEpDismissed)return;
+  const v=_pel.video||document.getElementById('player-video');
+  if(!v||!v.duration||isNaN(v.duration)||v.duration<10)return;
+  const rem=v.duration-v.currentTime;
+  if(rem<=70&&rem>0)showNextEpBtn();
+  // Auto-avança quando o episódio termina
+  if(rem<=1){
+    hideNextEpBtn();
+    _nextEpDismissed=false;
+    setTimeout(playNextEpisode,800);
+  }
+}
 
 function fmtTime(s){s=Math.floor(s||0);const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return h>0?`${h}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`:`${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;}
 
@@ -3078,7 +3332,10 @@ function _gtvSelectTrack(track){
     newHls.loadSource(url);
     newHls.attachMedia(v);
 
-    newHls.on(Hls.Events.MANIFEST_PARSED,function(){
+    newHls.on(Hls.Events.MANIFEST_PARSED,function(_ev2, data2){
+      // Melhoria 1 — Trava qualidade em HD também no HLS recriado
+      var lvls2 = (data2&&data2.levels)||[];
+      if(lvls2.length>1){var hdMax2=-1;for(var _li2=0;_li2<lvls2.length;_li2++){if((lvls2[_li2].height||9999)<=720)hdMax2=_li2;}if(hdMax2>=0)newHls.autoLevelCapping=hdMax2;}
       // Define a faixa ANTES de iniciar a reprodução
       if(newHls.audioTracks&&newHls.audioTracks.length>track.idx){
         newHls.audioTrack=track.idx;
@@ -3245,6 +3502,257 @@ function showScModal(){document.getElementById('sc-modal').classList.add('show')
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 let _toastT;
 function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='show'+(type?' '+type:'');clearTimeout(_toastT);_toastT=setTimeout(()=>el.className='',3500);}
+
+// ══════════════════════════════════════════════════════════════
+// MELHORIA 3 — PiP Flutuante (Smart TV / Android Box / PC)
+// Detecta API nativa primeiro; se não disponível usa mini player
+// ══════════════════════════════════════════════════════════════
+var _pipActive = false;
+var _pipHls = null;       // instância HLS do mini player
+var _pipDragging = false;
+var _pipDragOffX = 0, _pipDragOffY = 0;
+
+function togglePip() {
+  // Tenta API nativa (Chrome/Firefox desktop)
+  var mainVideo = document.getElementById('player-video');
+  if (document.pictureInPictureEnabled && mainVideo) {
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(function(){});
+      document.getElementById('pip-act').classList.remove('on');
+      return;
+    }
+    mainVideo.requestPictureInPicture().then(function() {
+      document.getElementById('pip-act').classList.add('on');
+    }).catch(function() {
+      // API nativa falhou — usa mini player flutuante
+      _pipOpenFloat();
+    });
+    return;
+  }
+  // API não disponível (Smart TV / Android WebView) — usa mini player
+  if (_pipActive) { closePip(); return; }
+  _pipOpenFloat();
+}
+
+function _pipOpenFloat() {
+  var mainVideo = document.getElementById('player-video');
+  if (!mainVideo || !pUrls || !pUrls.length) { toast('Nenhum conteúdo ativo','err'); return; }
+
+  _pipActive = true;
+  var pipEl = document.getElementById('pip-mini');
+  var pipVideo = document.getElementById('pip-mini-video');
+  pipEl.classList.add('show');
+  document.getElementById('pip-act').classList.add('on');
+
+  var url = pUrls[pIdx] || pUrls[0];
+
+  // Cria instância HLS independente para o mini player
+  if (_pipHls) { try{_pipHls.destroy();}catch(e){} _pipHls = null; }
+
+  if (url.includes('.m3u8') && Hls.isSupported()) {
+    _pipHls = new Hls({
+      enableWorker: false,
+      maxBufferLength: 15,
+      lowLatencyMode: !isVOD,
+      startLevel: 0, // começa no nível mais baixo para economizar banda
+      autoLevelCapping: 0 // PiP sempre na qualidade mínima
+    });
+    _pipHls.loadSource(url);
+    _pipHls.attachMedia(pipVideo);
+    _pipHls.on(Hls.Events.MANIFEST_PARSED, function() {
+      // Sincroniza posição com o vídeo principal (VOD)
+      if (isVOD && mainVideo.currentTime > 2) {
+        pipVideo.currentTime = mainVideo.currentTime;
+      }
+      pipVideo.play().catch(function(){});
+    });
+    _pipHls.on(Hls.Events.ERROR, function(_e, d) {
+      if (d.fatal) { _pipHls.destroy(); _pipHls = null; }
+    });
+  } else {
+    // MP4/MKV direto
+    pipVideo.src = url;
+    pipVideo.load();
+    pipVideo.onloadedmetadata = function() {
+      if (isVOD && mainVideo.currentTime > 2) pipVideo.currentTime = mainVideo.currentTime;
+      pipVideo.play().catch(function(){});
+    };
+  }
+
+  // Pausa o vídeo principal (opcional — comentar se preferir continuar os dois)
+  // mainVideo.pause(); isPlaying = false;
+
+  _pipInitDrag(pipEl);
+  _pipInitTouchShow(pipEl);
+  toast('⧉ PiP ativado — arraste para reposicionar');
+}
+
+function closePip() {
+  _pipActive = false;
+  var pipVideo = document.getElementById('pip-mini-video');
+  pipVideo.pause(); pipVideo.src = '';
+  if (_pipHls) { try{_pipHls.destroy();}catch(e){} _pipHls = null; }
+  document.getElementById('pip-mini').classList.remove('show');
+  document.getElementById('pip-act').classList.remove('on');
+}
+
+function pipTogglePlay() {
+  var pipVideo = document.getElementById('pip-mini-video');
+  var btn = document.getElementById('pip-pp-btn');
+  if (pipVideo.paused) { pipVideo.play().catch(function(){}); btn.textContent = '⏸'; }
+  else { pipVideo.pause(); btn.textContent = '▶'; }
+}
+
+// Drag com mouse (PC)
+function _pipInitDrag(el) {
+  var handle = document.getElementById('pip-drag-handle');
+  handle.onmousedown = function(e) {
+    _pipDragging = true;
+    var rect = el.getBoundingClientRect();
+    _pipDragOffX = e.clientX - rect.left;
+    _pipDragOffY = e.clientY - rect.top;
+    document.onmousemove = function(me) {
+      if (!_pipDragging) return;
+      var x = Math.max(0, Math.min(window.innerWidth  - el.offsetWidth,  me.clientX - _pipDragOffX));
+      var y = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, me.clientY - _pipDragOffY));
+      el.style.left = x + 'px'; el.style.right = 'auto';
+      el.style.top  = y + 'px'; el.style.bottom = 'auto';
+    };
+    document.onmouseup = function() { _pipDragging = false; document.onmousemove = null; document.onmouseup = null; };
+  };
+  // Drag com toque (TV Box / Android)
+  handle.addEventListener('touchstart', function(e) {
+    var t = e.touches[0];
+    var rect = el.getBoundingClientRect();
+    _pipDragOffX = t.clientX - rect.left;
+    _pipDragOffY = t.clientY - rect.top;
+    e.preventDefault();
+  }, {passive:false});
+  handle.addEventListener('touchmove', function(e) {
+    var t = e.touches[0];
+    var x = Math.max(0, Math.min(window.innerWidth  - el.offsetWidth,  t.clientX - _pipDragOffX));
+    var y = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, t.clientY - _pipDragOffY));
+    el.style.left = x + 'px'; el.style.right = 'auto';
+    el.style.top  = y + 'px'; el.style.bottom = 'auto';
+    e.preventDefault();
+  }, {passive:false});
+}
+
+// Toque no mini player revela controles brevemente (TV/touch)
+function _pipInitTouchShow(el) {
+  el.addEventListener('touchstart', function() {
+    el.classList.add('touch-show');
+    clearTimeout(el._touchT);
+    el._touchT = setTimeout(function(){ el.classList.remove('touch-show'); }, 2500);
+  });
+}
+
+// Fecha PiP quando o player principal fechar
+var _origStopClose = stopAndClosePlayer;
+stopAndClosePlayer = function() {
+  if (_pipActive) closePip();
+  _origStopClose();
+};
+
+// Escuta saída do PiP nativo para sincronizar badge
+document.addEventListener('leavepictureinpicture', function() {
+  document.getElementById('pip-act').classList.remove('on');
+});
+
+// ══════════════════════════════════════════════════════════════
+// MELHORIA 4 — Timer de Desligamento
+// ══════════════════════════════════════════════════════════════
+var _sleepTimer = null;
+var _sleepEndsAt = 0;
+var _sleepCountdownInterval = null;
+
+function toggleSleepMenu() {
+  var m = document.getElementById('sleep-menu');
+  hideAudioMenu(); hideSubMenu();
+  m.classList.toggle('show');
+  showOverlay();
+}
+
+function hideSleepMenu() {
+  document.getElementById('sleep-menu').classList.remove('show');
+}
+
+function setSleepTimer(minutes) {
+  // Cancela timer anterior se houver
+  if (_sleepTimer) { clearTimeout(_sleepTimer); _sleepTimer = null; }
+  if (_sleepCountdownInterval) { clearInterval(_sleepCountdownInterval); _sleepCountdownInterval = null; }
+
+  _sleepEndsAt = Date.now() + minutes * 60 * 1000;
+
+  // Marca opção ativa no menu
+  document.querySelectorAll('.sleep-opt').forEach(function(el) { el.classList.remove('active'); });
+  document.getElementById('sleep-cancel-opt').style.display = 'flex';
+
+  // Atualiza badge no canto do player
+  var badge = document.getElementById('sleep-countdown-badge');
+  badge.classList.add('show');
+
+  _sleepCountdownInterval = setInterval(function() {
+    var rem = Math.max(0, _sleepEndsAt - Date.now());
+    if (rem <= 0) { clearInterval(_sleepCountdownInterval); _sleepCountdownInterval = null; return; }
+    var m2 = Math.floor(rem / 60000);
+    var s2 = Math.floor((rem % 60000) / 1000);
+    badge.textContent = '⏱ ' + String(m2).padStart(2,'0') + ':' + String(s2).padStart(2,'0');
+  }, 1000);
+
+  // Dispara o desligamento
+  _sleepTimer = setTimeout(function() {
+    _sleepFire();
+  }, minutes * 60 * 1000);
+
+  hideSleepMenu();
+  toast('⏱ Timer: ' + minutes + 'min', 'ok');
+}
+
+function _sleepFire() {
+  clearInterval(_sleepCountdownInterval);
+  _sleepCountdownInterval = null;
+  document.getElementById('sleep-countdown-badge').classList.remove('show');
+  document.getElementById('sleep-cancel-opt').style.display = 'none';
+
+  // Tenta fechar a janela/app
+  try { window.close(); } catch(e) {}
+
+  // Se window.close() não funcionou (WebView/TV), para o player e exibe tela preta
+  setTimeout(function() {
+    try {
+      var v = document.getElementById('player-video');
+      if (v) { v.pause(); }
+    } catch(e) {}
+    // Exibe tela preta com mensagem
+    document.getElementById('sleep-blackout').classList.add('show');
+  }, 400);
+}
+
+function cancelSleepTimer() {
+  if (_sleepTimer) { clearTimeout(_sleepTimer); _sleepTimer = null; }
+  if (_sleepCountdownInterval) { clearInterval(_sleepCountdownInterval); _sleepCountdownInterval = null; }
+  _sleepEndsAt = 0;
+  document.getElementById('sleep-countdown-badge').classList.remove('show');
+  document.getElementById('sleep-cancel-opt').style.display = 'none';
+  document.querySelectorAll('.sleep-opt').forEach(function(el) { el.classList.remove('active'); });
+  hideSleepMenu();
+  toast('Timer cancelado');
+}
+
+function dismissBlackout() {
+  document.getElementById('sleep-blackout').classList.remove('show');
+  // Retoma o player
+  try {
+    var v = document.getElementById('player-video');
+    if (v && v.paused) { v.play().catch(function(){}); isPlaying = true; }
+  } catch(e) {}
+}
+
+// Toque em qualquer lugar da tela preta também dispensa
+document.getElementById('sleep-blackout') && document.getElementById('sleep-blackout').addEventListener('touchstart', function(e) {
+  if (e.target.tagName !== 'BUTTON') dismissBlackout();
+});
 </script>
 
 <!-- ══ CONTROLE PARENTAL ══ -->
